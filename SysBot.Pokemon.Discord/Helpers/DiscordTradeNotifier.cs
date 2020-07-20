@@ -89,7 +89,14 @@ namespace SysBot.Pokemon.Discord
                 x.IsInline = false;
             });
             var msg = $"Here are the details for `{r.Seed:X16}`:";
-            Trader.SendMessageAsync(msg, embed: embed.Build()).ConfigureAwait(false);
+            if (Hub.Config.SeedCheck.PostResultToChannel && !Hub.Config.SeedCheck.PostResultToBoth)
+                Context.Channel.SendMessageAsync(Trader.Mention + " - " + msg, embed: embed.Build()).ConfigureAwait(false);
+            else if (Hub.Config.SeedCheck.PostResultToBoth)
+            {
+                Context.Channel.SendMessageAsync(Trader.Username + " - " + msg, embed: embed.Build()).ConfigureAwait(false);
+                Trader.SendMessageAsync(msg, embed: embed.Build()).ConfigureAwait(false);
+            }
+            else Trader.SendMessageAsync(msg, embed: embed.Build()).ConfigureAwait(false);
         }
     }
 }
