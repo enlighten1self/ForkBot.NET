@@ -95,6 +95,7 @@ namespace SysBot.Pokemon
                 or PokeRoutineType.SurpriseTrade
                 or PokeRoutineType.LinkTrade
                 or PokeRoutineType.Clone
+                or PokeRoutineType.FixOT
                 or PokeRoutineType.Dump
                 or PokeRoutineType.SeedCheck
                 => new PokeTradeBot(Hub, cfg),
