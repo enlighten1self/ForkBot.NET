@@ -162,9 +162,7 @@ namespace SysBot.Pokemon.Discord
         {
             if (!pk8.CanBeTraded() || !IsItemMule(pk8))
             {
-                if (Info.Hub.Config.Trade.ItemMuleCustomMessage == string.Empty || IsItemMule(pk8))
-                    Info.Hub.Config.Trade.ItemMuleCustomMessage = "Provided Pokémon content is blocked from trading!";
-                await ReplyAsync($"{Info.Hub.Config.Trade.ItemMuleCustomMessage}").ConfigureAwait(false);
+                await ReplyAsync($"{(Info.Hub.Config.Trade.ItemMuleCustomMessage == string.Empty || IsItemMule(pk8) ? "Provided Pokémon content is blocked from trading!" : Info.Hub.Config.Trade.ItemMuleCustomMessage)}").ConfigureAwait(false);
                 return;
             }
 
@@ -186,8 +184,7 @@ namespace SysBot.Pokemon.Discord
 
         private bool IsItemMule(PK8 pk8)
         {
-            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None || pk8.Species == 132 && Info.Hub.Config.Trade.DittoTrade
-                || Info.Hub.Config.Trade.EggTrade && pk8.Nickname == "Egg" || Context.Message.Content.Contains($"{Info.Hub.Config.Discord.CommandPrefix}roll") || Context.Message.Content.Contains($"{Info.Hub.Config.Discord.CommandPrefix}eggroll"))
+            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None || Info.Hub.Config.Trade.DittoTrade && pk8.Species == 132 || Info.Hub.Config.Trade.EggTrade && pk8.Nickname == "Egg")
                 return true;
             return !(pk8.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()) || pk8.IsShiny);
         }
@@ -264,12 +261,14 @@ namespace SysBot.Pokemon.Discord
         {
             pk8.IsEgg = true;
             pk8.Egg_Location = 60002;
+            pk8.EggMetDate = System.DateTime.Parse("2020/10/20");
             pk8.HeldItem = 0;
             pk8.CurrentLevel = 1;
             pk8.EXP = 0;
             pk8.DynamaxLevel = 0;
             pk8.Met_Level = 1;
             pk8.Met_Location = 0;
+            pk8.MetDate = System.DateTime.Parse("2020/10/20");
             pk8.CurrentHandler = 0;
             pk8.OT_Friendship = 1;
             pk8.HT_Name = "";
@@ -294,7 +293,7 @@ namespace SysBot.Pokemon.Discord
             if (!content.Contains("OT: "))
                 return specifyOT = string.Empty;
 
-            return specifyOT = System.Text.RegularExpressions.Regex.Match(content, @"OT:(\S*\s?\S*\s?\S*)?$\W?", System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value.Trim();
+            return specifyOT = System.Text.RegularExpressions.Regex.Match(content, @"OT:(.*)?$\W?", System.Text.RegularExpressions.RegexOptions.Multiline).Groups[1].Value.Trim();
         }
     }
 }
