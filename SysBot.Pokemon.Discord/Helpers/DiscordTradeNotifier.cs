@@ -50,6 +50,22 @@ namespace SysBot.Pokemon.Discord
             Trader.SendMessageAsync(message).ConfigureAwait(false);
             if (result.Species != 0 && Hub.Config.Discord.ReturnPK8s)
                 Trader.SendPKMAsync(result, "Here's what you traded me!").ConfigureAwait(false);
+
+            if (info.Type == PokeTradeType.TradeCord)
+            {
+                var user = Context.User.Id.ToString();
+                var original = TradeExtensions.TradeCordPath.FirstOrDefault(x => x.Contains(user));
+                TradeExtensions.TradeCordPath.Remove(original);
+                try
+                {
+                    System.IO.File.Move(original, System.IO.Path.Combine($"TradeCord\\Backup\\{user}", original.Split('\\')[2]));
+                }
+                catch (Exception ex)
+                {
+                    Base.LogUtil.LogText("Error occurred: " + ex.InnerException);
+                    TradeExtensions.TradeCordPath.RemoveAll(x => x.Contains(user));
+                }
+            }
         }
 
         public void SendNotification(PokeRoutineExecutor routine, PokeTradeDetail<T> info, string message)
