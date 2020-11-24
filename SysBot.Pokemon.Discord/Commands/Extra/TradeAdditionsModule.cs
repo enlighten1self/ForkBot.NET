@@ -101,17 +101,13 @@ namespace SysBot.Pokemon.Discord
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
             int.TryParse(content[0], out int catchID);
             var rng = new Random();
-            var speciesRng = (int)TradeExtensions.GalarDex.GetValue(rng.Next(0, TradeExtensions.GalarDex.Length));
+            var speciesZukan = Zukan8.GetRawIndexes(PersonalTable.SWSH, 2);
+            var speciesRng = speciesZukan[rng.Next(0, speciesZukan.Count)].Species;
             var catchRng = rng.Next(0, 100);
             var eggRng = rng.Next(0, 100);
             PKM eggPkm = new PK8();
-            bool egg = false;
+            bool egg = content[1] != "0" && content[2] != "0" && CanGenerateEgg(content, out _, out _, out _, out _, out _, out _) && eggRng > 75;
             List<string> trainerInfo = new List<string>();
-            bool femaleDependent = false;
-            bool maleDependent = false;
-
-            if (content[1] != "0" && content[2] != "0")
-                egg = CanGenerateEgg(content, out _, out _, out _, out _, out _, out _) && eggRng > 60;
 
             for (int i = 3; i < 8; i++)
             {
@@ -128,13 +124,7 @@ namespace SysBot.Pokemon.Discord
                 if (invalidEgg)
                 {
                     await Context.Channel.SendPKMAsync(eggPkm, $"Something went wrong!\n{ReusableActions.GetFormattedShowdownText(eggPkm)}").ConfigureAwait(false);
-                    eggPkm = eggPkm.LegalizePokemon();
-                    if (!new LegalityAnalysis(eggPkm).Valid)
-                    {
-                        await Context.Channel.SendMessageAsync($"Oops, I was unable to legalize the egg!").ConfigureAwait(false);
-                        return;
-                    }
-                    else eggPkm.RefreshChecksum();
+                    return;
                 }
 
                 eggPkm.ResetPartyStats();
@@ -142,15 +132,14 @@ namespace SysBot.Pokemon.Discord
 
             if (catchRng > 20)
             {
-                string shinyType = string.Empty;
-                var ballRng = $"\nBall: {(Ball)rng.Next(1, 26)}";
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8);
                 var nidoranGender = string.Empty;
                 var alcremieDeco = (uint)rng.Next(0, 6);
                 var shinyRng = rng.Next(0, 101);
+                string shinyType = shinyRng > 98 ? "\nShiny: Square" : shinyRng > 95 ? "\nShiny: Star" : "";
                 var gmaxRng = rng.Next(0, 101);
-                bool canGmax = false;
-                var formHack = FormHack(speciesRng, ballRng);
+                var formHack = FormHack(speciesRng, shinyRng, gmaxRng);
+                var ballRng = formHack.Item2;
 
                 if (speciesRng == 32 || speciesRng == 29)
                 {
@@ -158,42 +147,18 @@ namespace SysBot.Pokemon.Discord
                     speciesName = speciesName.Remove(speciesName.Length - 1);
                 }
 
-                if (ballRng != formHack.Item2)
-                    ballRng = formHack.Item2;
-
                 if (((speciesRng == (int)Species.Mew && shinyRng > 95) || ballRng.Contains("Cherish")) && trainerInfo.Count == 5)
                     trainerInfo.RemoveAt(4);
 
-                if ((speciesRng == (int)Species.Silvally || speciesRng == (int)Species.Necrozma) && shinyRng > 95)
-                    ballRng = "\nBall: Cherish";
-                else if ((speciesRng == (int)Species.Silvally || (speciesRng == (int)Species.Golurk && ballRng.Contains("Cherish")) || (speciesRng == (int)Species.Beldum && ballRng.Contains("Cherish"))) && shinyRng < 96)
-                    ballRng = "\nBall: Poke";
-
-                if ((speciesRng == (int)Species.Poipole || speciesRng == (int)Species.Naganadel || speciesRng == (int)Species.TapuKoko || speciesRng == (int)Species.TapuLele ||
-                    speciesRng == (int)Species.TapuBulu || speciesRng == (int)Species.TapuFini || speciesRng == (int)Species.Larvitar || speciesRng == (int)Species.Solgaleo ||
-                    speciesRng == (int)Species.Lunala || speciesRng == (int)Species.Necrozma) && ballRng.Contains("Cherish") && shinyRng < 96)
-                    ballRng = "\nBall: Poke";
-
-                if ((speciesRng == (int)Species.Meltan || speciesRng == (int)Species.Melmetal) && !TradeExtensions.LGPEBalls.Contains(ballRng.Split(' ')[1].Trim()))
-                    ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(0, TradeExtensions.LGPEBalls.Length)];
-
-                if (TradeExtensions.ShinyLock.Contains(speciesRng) || (ballRng.Contains("Cherish") && !TradeExtensions.CanBeShinyCherish.Contains(speciesRng)) ||
+                if (TradeExtensions.ShinyLock.Contains(speciesRng) || (ballRng.Contains("Cherish") && !TradeExtensions.CanBeShinyCherish.Contains(speciesRng) && !TradeExtensions.CherishShinyOnly.Contains(speciesRng)) ||
                    (speciesRng == (int)Species.Pikachu && formHack.Item1 != "-Partner" && formHack.Item1 != "") || ((speciesRng == (int)Species.Poipole || speciesRng == (int)Species.Naganadel) && ballRng.Contains("Beast")) ||
-                   ((speciesRng == (int)Species.Zapdos || speciesRng == (int)Species.Articuno || speciesRng == (int)Species.Moltres) && formHack.Item1 != ""))
-                    shinyRng = 0;
-
-                if (shinyRng > 98)
-                    shinyType = "\nShiny: Square";
-                else if (shinyRng > 95)
-                    shinyType = "\nShiny: Star";
+                   ((speciesRng == (int)Species.Zapdos || speciesRng == (int)Species.Articuno || speciesRng == (int)Species.Moltres) && formHack.Item1 != "") || (ballRng.Contains("Cherish") && speciesRng == (int)Species.Melmetal))
+                    shinyType = "";
 
                 var set = new ShowdownSet($"{speciesName}{formHack.Item1}{ballRng}{shinyType}\n{string.Join("\n", trainerInfo)}");
-                canGmax = set.CanToggleGigantamax(set.Species, set.FormIndex) && gmaxRng > 70 && !ballRng.Contains("Cherish") && set.Species != (int)Species.Melmetal;
+                bool canGmax = set.CanToggleGigantamax(set.Species, set.FormIndex) && gmaxRng > 70 && !ballRng.Contains("Cherish");
                 if (canGmax)
                     set.CanGigantamax = true;
-
-                if (canGmax && ballRng.Contains("Cherish") && set.Shiny)
-                    set.CanGigantamax = false;
 
                 var template = AutoLegalityWrapper.GetTemplate(set);
                 var sav = AutoLegalityWrapper.GetTrainerInfo(8);
@@ -205,27 +170,13 @@ namespace SysBot.Pokemon.Discord
                 if (pkm.Species == (int)Species.Pikachu && pkm.AltForm == 0 && shinyRng > 95)
                     CommonEdits.SetShiny(pkm, Shiny.Random);
 
-                if (TradeExtensions.GenderDependent.Contains(pkm.Species) && !set.CanGigantamax && pkm.AltForm == 0)
-                {
-                    if (pkm.Gender == 0)
-                        maleDependent = true;
-                    else femaleDependent = true;
-                }
-
                 var la = new LegalityAnalysis(pkm);
                 var spec = GameInfo.Strings.Species[pkm.Species];
                 var invalid = !(pkm is PK8) || (!la.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality);
                 if (invalid)
                 {
                     await Context.Channel.SendPKMAsync(pkm, $"Something went wrong!\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
-                    pkm = pkm.LegalizePokemon();
-                    pkm.IsNicknamed = false;
-                    if (!new LegalityAnalysis(pkm).Valid)
-                    {
-                        await Context.Channel.SendMessageAsync($"Oops, I was unable to legalize it!").ConfigureAwait(false);
-                        return;
-                    }
-                    else pkm.RefreshChecksum();
+                    return;
                 }
 
                 catchID++;
@@ -234,11 +185,7 @@ namespace SysBot.Pokemon.Discord
                 pkm.ResetPartyStats();
                 TradeCordDump("TradeCord", user, pkm, out int index);
 
-                var pokeImg = $"https://projectpokemon.org/images/sprites-models/homeimg/poke_capture_" +
-                    (pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : $"0{pkm.Species}") + (pkm.AltForm < 10 ? "_00" : "_0") +
-                    pkm.AltForm + "_" + (pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : femaleDependent ? "fd" : maleDependent ? "md" : "mf") + "_" +
-                    (canGmax ? "g" : "n") + "_0000000" + (pkm.Species == (int)Species.Alcremie ? alcremieDeco : 0) + "_f_" + (pkm.IsShiny ? "r" : "n") + ".png";
-
+                var pokeImg = PokeImg(pkm, set.CanGigantamax, alcremieDeco);
                 var ballImg = $"https://serebii.net/itemdex/sprites/pgl/" + $"{(Ball)pkm.Ball}ball".ToLower() + ".png";
                 var embed = new EmbedBuilder { Color = pkm.IsShiny && pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.LightOrange : Color.Teal, ImageUrl = pokeImg, ThumbnailUrl = ballImg };
                 embed.AddField(x =>
@@ -510,20 +457,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             bool canGmax = new ShowdownSet(ShowdownSet.GetShowdownText(pkm)).CanGigantamax;
-            bool maleDependent = false;
-            bool femaleDependent = false;
-            if (TradeExtensions.GenderDependent.Contains(pkm.Species) && !canGmax && pkm.AltForm == 0)
-            {
-                if (pkm.Gender == 0)
-                    maleDependent = true;
-                else femaleDependent = true;
-            }
-
-            var pokeImg = $"https://projectpokemon.org/images/sprites-models/homeimg/poke_capture_" +
-                (pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : $"0{pkm.Species}") + "_00" +
-                pkm.AltForm + "_" + (pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : femaleDependent ? "fd" : maleDependent ? "md" : "mf") + "_" +
-                (canGmax ? "g" : "n") + "_0000000" + (pkm.Species == (int)Species.Alcremie ? pkm.SpriteItem : 0) + "_f_" + (pkm.IsShiny ? "r" : "n") + ".png";
-
+            var pokeImg = PokeImg(pkm, canGmax, pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : (uint)0);
             var split = path[0].Split('\\')[2].Split('-');
             var form = FormOutput(pkm);
             var embed = new EmbedBuilder { Color = pkm.IsShiny ? Color.Blue : Color.DarkBlue, ThumbnailUrl = pokeImg };
@@ -1202,15 +1136,16 @@ namespace SysBot.Pokemon.Discord
             return name;
         }
 
-        private Tuple<string,string> FormHack(int speciesRng, string ballRng)
+        private Tuple<string,string> FormHack(int speciesRng, int shinyRng, int gmaxRng)
         {
             var rng = new Random();
             string formHack;
             var formEdgeCaseRng = rng.Next(0, 2);
             string[] poipoleRng = { "Poke", "Beast", "Cherish" };
             var eventRng = rng.Next(0, 101);
+            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
 
-            if ((eventRng > 95 || ballRng.Contains("Cherish")) && TradeExtensions.Cherish.Contains(speciesRng))
+            if (ballRng.Contains("Cherish"))
             {
                 switch (speciesRng)
                 {
@@ -1223,10 +1158,18 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Corsola: formHack = "-Galar"; break;
                     case (int)Species.Rockruff: formHack = "-Dusk"; break;
                     case (int)Species.Lycanroc: formHack = "-Midnight"; break;
-                    case (int)Species.Gastrodon: formHack = "-East"; break;
+                    case (int)Species.Gastrodon: _ = shinyRng > 95 ? formHack = "-West" : formHack = "-East"; break;
                     case (int)Species.Pumpkaboo: formHack = "-Super"; break;
-                    case (int)Species.Meowth: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = "-Galar"; break;
+                    case (int)Species.Meowth: _ = formEdgeCaseRng == 1 ? formHack = $"{(gmaxRng > 70 ? "-Gmax" : "")}" : formHack = "-Galar"; break;
                     case (int)Species.Magearna: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = "-Original"; break;
+                    case (int)Species.Raikou: _ = shinyRng > 95 ? formHack = "\nRash Nature" : formHack = ""; break;
+                    case (int)Species.Entei: _ = shinyRng > 95 ? formHack = "\nAdamant Nature" : formHack = ""; break;
+                    case (int)Species.Suicune: _ = shinyRng > 95 ? formHack = "\nRelaxed Nature" : formHack = ""; break;
+                    case (int)Species.Tangrowth: formHack = "\nBrave Nature"; break;
+                    case (int)Species.Pichu: _ = shinyRng > 95 ? formHack = "\nJolly Nature" : formHack = ""; break;
+                    //case (int)Species.Melmetal: _ = gmaxRng > 70 ? formHack = "-Gmax" : formHack = ""; break;
+                    case (int)Species.Feebas: formHack = "\nCalm Nature"; break;
+                    case (int)Species.Whiscash: formHack = "\nGentle Nature"; break;
                     default: formHack = ""; break;
                 };
             }
@@ -1252,14 +1195,16 @@ namespace SysBot.Pokemon.Discord
                 }
             }
 
-            ballRng = !ballRng.Contains("Cherish") && TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
-            if (speciesRng == (int)Species.Poipole || speciesRng == (int)Species.Naganadel)
-                ballRng = "\nBall: " + poipoleRng[rng.Next(0, poipoleRng.Length)];
+            switch (speciesRng)
+            {
+                case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(0, poipoleRng.Length)]; break;
+                case (int)Species.Meltan: case (int)Species.Melmetal: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(0, TradeExtensions.LGPEBalls.Length)]; break;
+                //case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(0, TradeExtensions.LGPEBalls.Length)])}"; break;
+            };
 
-            if (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng) && speciesRng != (int)Species.Poipole && speciesRng != (int)Species.Naganadel)
-                ballRng = "\nBall: Cherish";
-
-            if (TradeExtensions.CherishOnly.Contains(speciesRng))
+            if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && ballRng.Contains("Cherish") && shinyRng < 96)
+                ballRng = "\nBall: Poke";
+            else if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && !ballRng.Contains("Cherish") && shinyRng > 95)
                 ballRng = "\nBall: Cherish";
 
             return new Tuple<string, string>(formHack, ballRng);
@@ -1367,6 +1312,28 @@ namespace SysBot.Pokemon.Discord
             }
 
             await msg.RemoveAllReactionsAsync().ConfigureAwait(false);
+        }
+
+        private string PokeImg(PKM pkm, bool canGmax, uint alcremieDeco)
+        {
+            bool md = false;
+            bool fd = false;
+            if (TradeExtensions.GenderDependent.Contains(pkm.Species) && !canGmax && pkm.AltForm == 0)
+            {
+                if (pkm.Gender == 0)
+                    md = true;
+                else fd = true;
+            }
+
+            var baseLink = "https://projectpokemon.org/images/sprites-models/homeimg/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+            baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : $"0{pkm.Species}";
+            baseLink[3] = pkm.AltForm < 10 ? $"00{pkm.AltForm}" : $"0{pkm.AltForm}";
+            baseLink[4] = pkm.PersonalInfo.OnlyFemale ? "fo" : pkm.PersonalInfo.OnlyMale ? "mo" : pkm.PersonalInfo.Genderless ? "uk" : fd ? "fd" : md ? "md" : "mf";
+            baseLink[5] = canGmax ? "g" : "n";
+            baseLink[6] = "0000000" + (pkm.Species == (int)Species.Alcremie ? alcremieDeco : 0);
+            baseLink[8] = pkm.IsShiny ? "r.png" : "n.png";
+
+            return string.Join("_", baseLink);
         }
     }
 }

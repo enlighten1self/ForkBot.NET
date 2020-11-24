@@ -212,7 +212,6 @@ namespace SysBot.Pokemon
         {
             encounterCount++;
             Log($"Encounter: {encounterCount}{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}");
-            Counts.AddEncounteredSpecies(pk);
             if (legends)
                 Counts.AddCompletedLegends();
             else

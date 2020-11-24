@@ -80,7 +80,6 @@ namespace SysBot.Pokemon
                 encounterCount++;
                 Log($"Encounter: {encounterCount}:{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}");
                 Counts.AddCompletedEggs();
-                Counts.AddEncounteredSpecies(pk);
 
                 if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
                     DumpPokemon(DumpSetting.DumpFolder, "egg", pk);

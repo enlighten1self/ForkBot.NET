@@ -93,7 +93,6 @@ namespace SysBot.Pokemon
                     DumpPokemon(DumpSetting.DumpFolder, "fossil", pk);
 
                 Counts.AddCompletedFossils();
-                Counts.AddEncounteredSpecies(pk);
 
                 if (StopConditionSettings.EncounterFound(pk, DesiredIVs, Hub.Config.StopConditions))
                 {
