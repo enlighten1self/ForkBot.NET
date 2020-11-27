@@ -87,14 +87,9 @@ namespace SysBot.Pokemon.Discord
             else if (!TradeCordCanCatch(user, out TimeSpan timeRemaining))
             {
                 var embedTime = new EmbedBuilder { Color = Color.DarkBlue };
-                embedTime.AddField(x =>
-                {
-                    x.Name = $"{Context.User.Username}, you're too quick!";
-                    x.Value = $"Please try again in {(timeRemaining.Seconds < 1 ? 1 : timeRemaining.Seconds):N0} {(_ = timeRemaining.Seconds > 1 ? "seconds" : "second")}!";
-                    x.IsInline = false;
-                });
-
-                await Context.Message.Channel.SendMessageAsync(embed: embedTime.Build()).ConfigureAwait(false);
+                var timeName = $"{Context.User.Username}, you're too quick!";
+                var timeValue = $"Please try again in {(timeRemaining.Seconds < 1 ? 1 : timeRemaining.Seconds):N0} {(_ = timeRemaining.Seconds > 1 ? "seconds" : "second")}!";
+                await EmbedUtil(embedTime, timeName, timeValue).ConfigureAwait(false);
                 return;
             }
 
@@ -102,9 +97,9 @@ namespace SysBot.Pokemon.Discord
             int.TryParse(content[0], out int catchID);
             var rng = new Random();
             var speciesZukan = Zukan8.GetRawIndexes(PersonalTable.SWSH, 2);
-            var speciesRng = speciesZukan[rng.Next(0, speciesZukan.Count)].Species;
-            var catchRng = rng.Next(0, 100);
-            var eggRng = rng.Next(0, 100);
+            var speciesRng = speciesZukan[rng.Next(speciesZukan.Count)].Species;
+            var catchRng = rng.Next(101);
+            var eggRng = rng.Next(101);
             PKM eggPkm = new PK8();
             bool egg = content[1] != "0" && content[2] != "0" && CanGenerateEgg(content, out _, out _, out _, out _, out _, out _) && eggRng > 75;
             List<string> trainerInfo = new List<string>();
@@ -119,7 +114,6 @@ namespace SysBot.Pokemon.Discord
             {
                 eggPkm = TradeExtensions.EggRngRoutine(content, trainerInfo);
                 var laEgg = new LegalityAnalysis(eggPkm);
-                var specEgg = GameInfo.Strings.Species[eggPkm.Species];
                 var invalidEgg = !(eggPkm is PK8) || (!laEgg.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality);
                 if (invalidEgg)
                 {
@@ -134,10 +128,9 @@ namespace SysBot.Pokemon.Discord
             {
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8);
                 var nidoranGender = string.Empty;
-                var alcremieDeco = (uint)rng.Next(0, 6);
-                var shinyRng = rng.Next(0, 101);
+                var shinyRng = rng.Next(101);
                 string shinyType = shinyRng > 98 ? "\nShiny: Square" : shinyRng > 95 ? "\nShiny: Star" : "";
-                var gmaxRng = rng.Next(0, 101);
+                var gmaxRng = rng.Next(101);
                 var formHack = FormHack(speciesRng, shinyRng, gmaxRng);
                 var ballRng = formHack.Item2;
 
@@ -164,14 +157,13 @@ namespace SysBot.Pokemon.Discord
                 var sav = AutoLegalityWrapper.GetTrainerInfo(8);
                 var pkm = sav.GetLegal(template, out _);
 
-                TradeExtensions.RngRoutine(pkm, alcremieDeco);
-                var form = nidoranGender != string.Empty ? nidoranGender : FormOutput(pkm);
+                TradeExtensions.RngRoutine(pkm);
+                var form = nidoranGender != string.Empty ? nidoranGender : TradeExtensions.FormOutput(pkm);
 
                 if (pkm.Species == (int)Species.Pikachu && pkm.AltForm == 0 && shinyRng > 95)
                     CommonEdits.SetShiny(pkm, Shiny.Random);
 
                 var la = new LegalityAnalysis(pkm);
-                var spec = GameInfo.Strings.Species[pkm.Species];
                 var invalid = !(pkm is PK8) || (!la.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality);
                 if (invalid)
                 {
@@ -185,80 +177,56 @@ namespace SysBot.Pokemon.Discord
                 pkm.ResetPartyStats();
                 TradeCordDump("TradeCord", user, pkm, out int index);
 
-                var pokeImg = PokeImg(pkm, set.CanGigantamax, alcremieDeco);
+                var pokeImg = PokeImg(pkm, set.CanGigantamax, pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : (uint)0);
                 var ballImg = $"https://serebii.net/itemdex/sprites/pgl/" + $"{(Ball)pkm.Ball}ball".ToLower() + ".png";
                 var embed = new EmbedBuilder { Color = pkm.IsShiny && pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.LightOrange : Color.Teal, ImageUrl = pokeImg, ThumbnailUrl = ballImg };
-                embed.AddField(x =>
-                {
-                    x.Name = $"{Context.User.Username}'s Catch [#{catchID}]";
-                    x.Value = $"You threw a {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}...";
-                    x.IsInline = false;
-                }).AddField(x =>
-                {
-                    x.Name = "\nResults";
-                    x.Value = $"Success! It put up a fight, but you caught {(pkm.IsShiny ? "**" + speciesName + form + $" [ID: {index}]**" : speciesName + form + $" [ID: {index}]")}!";
-                    x.IsInline = false;
-                });
+                var catchName = $"{Context.User.Username}'s Catch [#{catchID}]" + "&" + "\nResults";
+                var catchMsg = $"You threw a {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}..." + "&" + 
+                    $"Success! It put up a fight, but you caught {(pkm.IsShiny ? "**" + speciesName + form + $" [ID: {index}]**" : speciesName + form + $" [ID: {index}]")}!";
 
                 if (egg)
                 {
                     catchID++;
                     content[0] = catchID.ToString();
                     var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(eggPkm.Species, 2, 8);
-                    var eggForm = FormOutput(eggPkm);
+                    var eggForm = TradeExtensions.FormOutput(eggPkm);
                     File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
-                    embed.AddField(x =>
-                    {
-                        x.Name = "\nEggs";
-                        x.Value = $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
+                    catchName = catchName + "&" + "\nEggs";
+                    catchMsg = catchMsg + "&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" + 
                         $" from the daycare! Welcome, {(eggPkm.IsShiny ? "**" + eggSpeciesName + eggForm + $" [ID: {indexEgg}]**" : eggSpeciesName + eggForm + $" [ID: {indexEgg}]")}!";
-                        x.IsInline = false;
-                    });
                 }
 
                 TradeCordCooldown(user);
-                await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+                await EmbedUtil(embed, catchName, catchMsg).ConfigureAwait(false);
             }
             else
             {
-                var spookyRng = rng.Next(0, 100);
+                var spookyRng = rng.Next(101);
                 var imgRng = rng.Next(1, 3);
                 string imgGarf = "https://i.imgur.com/BOb6IbW.png";
                 string imgConk = "https://i.imgur.com/oSUQhYv.png";
-                var embedFail = new EmbedBuilder { Color = Color.Teal, ImageUrl = spookyRng > 90 && imgRng == 1 ? imgGarf : spookyRng > 90 && imgRng == 2 ? imgConk : string.Empty };
                 var ball = (Ball)rng.Next(2, 26);
-                embedFail.AddField(x =>
-                {
-                    x.Name = $"{Context.User.Username}'s Catch";
-                    x.Value = $"You threw a {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}...";
-                    x.IsInline = false;
-                }).AddField(x =>
-                {
-                    x.Name = "Results";
-                    x.Value = $"{(spookyRng > 90 && imgRng != 3 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
-                    x.IsInline = false;
-                });
+                var embedFail = new EmbedBuilder { Color = Color.Teal, ImageUrl = spookyRng > 90 && imgRng == 1 ? imgGarf : spookyRng > 90 && imgRng == 2 ? imgConk : string.Empty };
+                var failName = $"{Context.User.Username}'s Catch" + "&" + "Results";
+                var failMsg = $"You threw a {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}..." + "&" +
+                    $"{(spookyRng > 90 && imgRng != 3 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
 
                 if (egg)
                 {
                     catchID++;
                     content[0] = catchID.ToString();
                     var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(eggPkm.Species, 2, 8);
-                    var eggForm = FormOutput(eggPkm);
+                    var eggForm = TradeExtensions.FormOutput(eggPkm);
                     File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
-                    embedFail.AddField(x =>
-                    {
-                        x.Name = "\nEggs";
-                        x.Value = $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
+                    failName = failName + "&" + "\nEggs";
+                    failMsg = failMsg + "&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
                         $" from the daycare! Welcome, {(eggPkm.IsShiny ? "**" + eggSpeciesName + eggForm + $" [ID: {indexEgg}]**" : eggSpeciesName + eggForm + $" [ID: {indexEgg}]")}!";
-                        x.IsInline = false;
-                    });
                 }
 
                 TradeCordCooldown(user);
-                await Context.Message.Channel.SendMessageAsync(embed: embedFail.Build()).ConfigureAwait(false);
+                await EmbedUtil(embedFail, failName, failMsg).ConfigureAwait(false);
                 return;
             }
         }
@@ -424,7 +392,6 @@ namespace SysBot.Pokemon.Discord
             var listName = name == "Shinies" ? "Shiny Pokémon" : name == "All" ? "Pokémon" : name == "Egg" ? "Eggs" : "List For " + name;
             var listCount = name == "Shinies" ? $"★{countSh.Count}" : name == "All" ? $"{list.Count}, ★{countSh.Count}" : $"{count.Count}, ★{countSh.Count}";
             var msg = $"{Context.User.Username}'s {listName} [Total: {listCount}]";
-
             await ListUtil(msg, entry).ConfigureAwait(false);
         }
 
@@ -459,16 +426,11 @@ namespace SysBot.Pokemon.Discord
             bool canGmax = new ShowdownSet(ShowdownSet.GetShowdownText(pkm)).CanGigantamax;
             var pokeImg = PokeImg(pkm, canGmax, pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : (uint)0);
             var split = path[0].Split('\\')[2].Split('-');
-            var form = FormOutput(pkm);
+            var form = TradeExtensions.FormOutput(pkm);
             var embed = new EmbedBuilder { Color = pkm.IsShiny ? Color.Blue : Color.DarkBlue, ThumbnailUrl = pokeImg };
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s {(pkm.IsShiny ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{form} [ID: {id}]";
-                x.Value = $"\n{ReusableActions.GetFormattedShowdownText(pkm)}";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var name = $"{Context.User.Username}'s {(pkm.IsShiny ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{form} [ID: {id}]";
+            var value = $"\n{ReusableActions.GetFormattedShowdownText(pkm)}";
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordMassRelease")]
@@ -502,14 +464,9 @@ namespace SysBot.Pokemon.Discord
                 File.Delete(line);
 
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Mass Release";
-                x.Value = $"Every non-shiny Pokémon was released, excluding Ditto, favorites, and those in daycare.";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed : embed.Build()).ConfigureAwait(false);
+            var name = $"{Context.User.Username}'s Mass Release";
+            var value = $"Every non-shiny Pokémon was released, excluding Ditto, favorites, and those in daycare.";
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordRelease")]
@@ -557,14 +514,9 @@ namespace SysBot.Pokemon.Discord
             File.Delete(path[0]);
             var sanitize = path[0].Split('-').Length > 2 ? (path[0].Split('-')[1] + "-" + path[0].Split('-')[2].Replace(".pk8", "")).Trim() : path[0].Split('-')[1].Replace(".pk8", "").Trim();
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Release";
-                x.Value = $"You release your {(path[0].Contains("★") ? "★" + sanitize : sanitize)}.";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed : embed.Build()).ConfigureAwait(false);
+            var name = $"{Context.User.Username}'s Release";
+            var value = $"You release your {(path[0].Contains("★") ? "★" + sanitize : sanitize)}.";
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordDaycare")]
@@ -601,16 +553,9 @@ namespace SysBot.Pokemon.Discord
             else if (content[2] == "0" && content[1] != "0")
                 msg = $"{dcSpecies1}\n\nIt seems lonely.";
 
-            var embedInfo = new EmbedBuilder { Color = Color.DarkBlue };
-            embedInfo.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Daycare Info";
-                x.Value = msg;
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed: embedInfo.Build()).ConfigureAwait(false);
-            return;
+            var embed = new EmbedBuilder { Color = Color.DarkBlue };
+            var name = $"{Context.User.Username}'s Daycare Info";
+            await EmbedUtil(embed, name, msg).ConfigureAwait(false);
         }
 
         [Command("TradeCordDaycare")]
@@ -679,14 +624,9 @@ namespace SysBot.Pokemon.Discord
                 var species2 = species.Count > 1 ? SpeciesName.GetSpeciesNameGeneration(int.Parse(species[1].Split('-')[0].Trim()), 2, 8) : "";
                 var form2 = species.Count > 1 && species[1].Contains("-") ? "-" + species[1].Split('-')[1].Trim() : "";
                 var embedWithdraw = new EmbedBuilder { Color = Color.DarkBlue };
-                embedWithdraw.AddField(x =>
-                {
-                    x.Name = $"{Context.User.Username}'s Daycare Withdraw";
-                    x.Value = $"{(id != "All" ? $"You withdrew your [ID: {id}] {species1}{form1} from the daycare." : $"You withdrew your [ID: {(id1 != "" ? id1 : id2)}] {species1}{form1}{(species.Count > 1 ? $" and [ID: {id2}] {species2}{form2}" : "")} from the daycare.")}";
-                    x.IsInline = false;
-                });
-
-                await Context.Message.Channel.SendMessageAsync(embed: embedWithdraw.Build()).ConfigureAwait(false);
+                var nameWithdraw = $"{Context.User.Username}'s Daycare Withdraw";
+                var valueWithdraw = $"{(id != "All" ? $"You withdrew your [ID: {id}] {species1}{form1} from the daycare." : $"You withdrew your [ID: {(id1 != "" ? id1 : id2)}] {species1}{form1}{(species.Count > 1 ? $" and [ID: {id2}] {species2}{form2}" : "")} from the daycare.")}";
+                await EmbedUtil(embedWithdraw, nameWithdraw, valueWithdraw).ConfigureAwait(false);
                 return;
             }
             else if (action == "d" || action == "deposit")
@@ -710,7 +650,7 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var form = FormOutput(pkm);
+                var form = TradeExtensions.FormOutput(pkm);
                 if (content[1] == "0" && content[2] != "0" && !content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id))
                     content[1] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + form + "_" + pkm.Ball;
                 else if (content[2] == "0" && content[1] != "0" && !content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id))
@@ -726,14 +666,9 @@ namespace SysBot.Pokemon.Discord
                 File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
                 var speciesStr = $"{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{form}({(Ball)pkm.Ball})";
                 var embedDeposit = new EmbedBuilder { Color = Color.DarkBlue };
-                embedDeposit.AddField(x =>
-                {
-                    x.Name = $"{Context.User.Username}'s Daycare Deposit";
-                    x.Value = $"Deposited your {(pkm.IsShiny ? "★" + speciesStr : speciesStr)} to daycare!";
-                    x.IsInline = false;
-                });
-
-                await Context.Message.Channel.SendMessageAsync(embed: embedDeposit.Build()).ConfigureAwait(false);
+                var nameDeposit = $"{Context.User.Username}'s Daycare Deposit";
+                var valueDeposit = $"Deposited your {(pkm.IsShiny ? "★" + speciesStr : speciesStr)} to daycare!";
+                await EmbedUtil(embedDeposit, nameDeposit, valueDeposit).ConfigureAwait(false);
                 return;
             }
         }
@@ -788,14 +723,9 @@ namespace SysBot.Pokemon.Discord
 
             var sanitize = split.Length > 2 ? (split[1] + "-" + split[2]).Split('.')[0].Trim() : split[1].Trim();
             var embed = new EmbedBuilder { Color = Color.Purple };
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Gift";
-                x.Value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize.Split('.')[0] + "**" : sanitize.Split('.')[0])} to {Context.Message.MentionedUsers.First().Username}.";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var name = $"{Context.User.Username}'s Gift";
+            var value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize.Split('.')[0] + "**" : sanitize.Split('.')[0])} to {Context.Message.MentionedUsers.First().Username}.";
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordTrainerInfoSet")]
@@ -860,16 +790,11 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            var embed = new EmbedBuilder { Color = Color.DarkBlue };
             File.WriteAllText($"TradeCord\\{Context.User.Id}.txt", string.Join(",", content));
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Trainer Info";
-                x.Value = $"\nYou've set your trainer info as the following: \n**OT:** {content[3]}\n**OTGender:** {content[4]}\n**TID:** {content[5]}\n**SID:** {content[6]}\n**Language:** {content[7]}";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            var embed = new EmbedBuilder { Color = Color.DarkBlue };
+            var name = $"{Context.User.Username}'s Trainer Info";
+            var value = $"\nYou've set your trainer info as the following: \n**OT:** {content[3]}\n**OTGender:** {content[4]}\n**TID:** {content[5]}\n**SID:** {content[6]}\n**Language:** {content[7]}";
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordTrainerInfo")]
@@ -882,18 +807,13 @@ namespace SysBot.Pokemon.Discord
             var user = Context.User.Id.ToString();
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',');
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
-            embed.AddField(x =>
-            {
-                x.Name = $"{Context.User.Username}'s Trainer Info";
-                x.Value = $"\n**OT:** {(content[3] == "0" ? "Not set." : content[3])}" +
+            var name = $"{Context.User.Username}'s Trainer Info";
+            var value = $"\n**OT:** {(content[3] == "0" ? "Not set." : content[3])}" +
                 $"\n**OTGender:** {(content[4] == "0" ? "Not set." : content[4])}" +
                 $"\n**TID:** {(content[5] == "0" ? "Not set." : content[5])}" +
                 $"\n**SID:** {(content[6] == "0" ? "Not set." : content[6])}" +
                 $"\n**Language:** {(content[7] == "0" || int.TryParse(content[7], out _) ? "Not set." : content[7])}";
-                x.IsInline = false;
-            });
-
-            await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+            await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
         [Command("TradeCordFavorites")]
@@ -923,7 +843,6 @@ namespace SysBot.Pokemon.Discord
 
             var entry = string.Join(", ", names);
             var msg = $"{Context.User.Username}'s Favorites";
-
             await ListUtil(msg, entry).ConfigureAwait(false);
         }
 
@@ -982,7 +901,7 @@ namespace SysBot.Pokemon.Discord
             Directory.CreateDirectory(dir);
             var split = pkm.FileName.Split('-');
             var speciesName = SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8);
-            var form = FormOutput(pkm);
+            var form = TradeExtensions.FormOutput(pkm);
             if (speciesName.Contains("Nidoran"))
             {
                 speciesName = speciesName.Remove(speciesName.Length - 1);
@@ -1059,18 +978,6 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private string FormOutput(PKM pkm)
-        {
-            var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
-            var formString = FormConverter.GetFormList(pkm.Species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
-
-            if (formString[pkm.AltForm] == "Normal" || formString[pkm.AltForm].Contains("-") && pkm.Species != (int)Species.Zygarde || formString[pkm.AltForm] == "")
-                formString[pkm.AltForm] = "";
-            else formString[pkm.AltForm] = "-" + formString[pkm.AltForm];
-
-            return formString[pkm.AltForm];
-        }
-
         private bool CanGenerateEgg(List<string> content, out string[] split1, out string[] split2, out string form1, out string form2, out int speciesID1, out int speciesID2)
         {
             split1 = content[1].Split('_');
@@ -1140,9 +1047,9 @@ namespace SysBot.Pokemon.Discord
         {
             var rng = new Random();
             string formHack;
-            var formEdgeCaseRng = rng.Next(0, 2);
+            var formEdgeCaseRng = rng.Next(2);
             string[] poipoleRng = { "Poke", "Beast", "Cherish" };
-            var eventRng = rng.Next(0, 101);
+            var eventRng = rng.Next(101);
             string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
 
             if (ballRng.Contains("Cherish"))
@@ -1180,7 +1087,7 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Meowstic: case (int)Species.Indeedee: _ = formEdgeCaseRng == 1 ? formHack = "-M" : formHack = "-F"; break;
                     case (int)Species.NidoranF: case (int)Species.NidoranM: _ = speciesRng == (int)Species.NidoranF ? formHack = "-F" : formHack = "-M"; break;
                     case (int)Species.Sinistea: case (int)Species.Polteageist: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = "-Antique"; break;
-                    case (int)Species.Pikachu: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = TradeExtensions.PartnerPikachuHeadache[rng.Next(0, TradeExtensions.PartnerPikachuHeadache.Length)]; break;
+                    case (int)Species.Pikachu: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = TradeExtensions.PartnerPikachuHeadache[rng.Next(TradeExtensions.PartnerPikachuHeadache.Length)]; break;
                     case (int)Species.Exeggutor: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = "-Alola"; break;
                     default: formHack = ""; break;
                 };
@@ -1191,15 +1098,15 @@ namespace SysBot.Pokemon.Discord
                 {
                     var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
                     var formString = FormConverter.GetFormList(speciesRng, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
-                    formHack = formString.Length > 1 ? "-" + formString[rng.Next(0, formString.Length)] : "";
+                    formHack = formString.Length > 1 ? "-" + formString[rng.Next(formString.Length)] : "";
                 }
             }
 
             switch (speciesRng)
             {
-                case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(0, poipoleRng.Length)]; break;
-                case (int)Species.Meltan: case (int)Species.Melmetal: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(0, TradeExtensions.LGPEBalls.Length)]; break;
-                //case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(0, TradeExtensions.LGPEBalls.Length)])}"; break;
+                case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(poipoleRng.Length)]; break;
+                case (int)Species.Meltan: case (int)Species.Melmetal: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]; break;
+                //case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)])}"; break;
             };
 
             if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && ballRng.Contains("Cherish") && shinyRng < 96)
@@ -1334,6 +1241,23 @@ namespace SysBot.Pokemon.Discord
             baseLink[8] = pkm.IsShiny ? "r.png" : "n.png";
 
             return string.Join("_", baseLink);
+        }
+
+        private async Task EmbedUtil(EmbedBuilder embed, string name, string value)
+        {
+            var splitName = name.Split('&');
+            var splitValue = value.Split('&');
+            for (int i = 0; i < splitName.Length; i++)
+            {
+                embed.AddField(x =>
+                {
+                    x.Name = splitName[i];
+                    x.Value = splitValue[i];
+                    x.IsInline = false;
+                });
+            }
+
+            await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
         }
     }
 }
