@@ -430,7 +430,7 @@ namespace SysBot.Pokemon
                 await Click(HOME, 2_000, token).ConfigureAwait(false);
 
             await Click(DDOWN, Config.ConnectionType == ConnectionType.WiFi ? 0_250 : 0, token).ConfigureAwait(false);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
                 await Click(DRIGHT, Config.ConnectionType == ConnectionType.WiFi ? 0_250 : 0, token).ConfigureAwait(false);
             await Click(A, 1_000, token).ConfigureAwait(false); // Enter settings
             for (int i = 0; i < 14; i++)

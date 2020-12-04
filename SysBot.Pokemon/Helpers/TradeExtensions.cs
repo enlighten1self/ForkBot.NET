@@ -100,6 +100,8 @@ namespace SysBot.Pokemon
                                           (int)Species.Marshadow, (int)Species.Zacian, (int)Species.Zamazenta, (int)Species.Eternatus, (int)Species.Kubfu, (int)Species.Urshifu,
                                           (int)Species.Zarude, (int)Species.Glastrier, (int)Species.Spectrier, (int)Species.Calyrex };
 
+        public static int[] TradeEvo = { (int)Species.Machoke, (int)Species.Haunter, (int)Species.Boldore, (int)Species.Gurdurr, (int)Species.Phantump, (int)Species.Gourgeist };
+
         public static string[] PartnerPikachuHeadache = { "-Original", "-Partner", "-Hoenn", "-Sinnoh", "-Unova", "-Alola", "-Kalos", "-World" };
 
         public static string[] LGPEBalls = { "Poke", "Premier", "Great", "Ultra", "Master" };
@@ -168,6 +170,9 @@ namespace SysBot.Pokemon
             
             if (pkm.IsShiny && pkm.Met_Location == 244)
                 CommonEdits.SetShiny(pkm, Shiny.AlwaysStar);
+            
+            if (TradeEvo.Contains(pkm.Species))
+                pkm.HeldItem = 229;
 
             pkm.Nature = pkm.FatefulEncounter ? pkm.Nature : 
                 pkm.Species == (int)Species.Toxtricity && pkm.AltForm > 0 ? LowKey[rng.Next(LowKey.Length)] : 
@@ -204,39 +209,40 @@ namespace SysBot.Pokemon
                     pkm.SetAbilityIndex(2);
             }
 
-            if (!pkm.FatefulEncounter)
-                BallApplicator.ApplyBallLegalRandom(pkm);
-
-            if (!LegalEdits.ValidBall(pkm))
+            if (!pkm.FatefulEncounter || !LegalEdits.ValidBall(pkm))
                 BallApplicator.ApplyBallLegalRandom(pkm);
         }
 
-        public static PKM EggRngRoutine(List<string> content, List<string> trainerInfo)
+        public static PKM EggRngRoutine(List<string> content, List<string> trainerInfo, int form1, int form2, int species1, int species2)
         {
             var rng = new Random();
             var ballRng = $"\nBall: {(Ball)rng.Next(2, 26)}";
             var ball1 = int.Parse(content[1].Split('_')[content[1].Contains("★") ? 3 : 2].Trim());
             var ball2 = int.Parse(content[2].Split('_')[content[2].Contains("★") ? 3 : 2].Trim());
-            var form1 = content[1].Contains("-") ? "-" + content[1].Split('_')[content[1].Contains("★") ? 2 : 1].Split('-')[1].Trim() : "";
-            var form2 = content[2].Contains("-") ? "-" + content[2].Split('_')[content[2].Contains("★") ? 2 : 1].Split('-')[1].Trim() : "";
-            var species1 = form1 != "" ? int.Parse(content[1].Split('_')[content[1].Contains("★") ? 2 : 1].Replace(form1, "").Trim()) : int.Parse(content[1].Split('_')[content[1].Contains("★") ? 2 : 1].Trim());
-            var species2 = form2 != "" ? int.Parse(content[2].Split('_')[content[2].Contains("★") ? 2 : 1].Replace(form2, "").Trim()) : int.Parse(content[2].Split('_')[content[2].Contains("★") ? 2 : 1].Trim());
-            bool specificEgg = (species1 == species2 && ValidEgg.Contains(species1)) || ((species1 == 132 || species2 == 132) && (ValidEgg.Contains(species1) || ValidEgg.Contains(species2)));
-            var shinyRng = rng.Next(content[1].Contains("★") && content[2].Contains("★") ? 85 : 101);
-            var ballRngDC = rng.Next(3);
-            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(species1 == 132 && species2 != 132 ? species2 : species1, 2, 8) : SpeciesName.GetSpeciesNameGeneration((int)ValidEgg.GetValue(rng.Next(0, ValidEgg.Length)), 2, 8);
+            bool specificEgg = (species1 == species2 && ValidEgg.Contains(species1)) || ((species1 == 132 || species2 == 132) && (ValidEgg.Contains(species1) || ValidEgg.Contains(species2))) || ((species1 == 29 || species1 == 32) && (species2 == 29 || species2 == 32));
+            var shinyRng = content[1].Contains("★") && content[2].Contains("★") ? rng.Next(101) + 10 : rng.Next(101);
+            var ballRngDC = rng.Next(1, 3);
+            var dittoLoc = DittoSlot(species1, species2);
+            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(dittoLoc == 1 ? species2 : species1, 2, 8) : SpeciesName.GetSpeciesNameGeneration(ValidEgg[rng.Next(ValidEgg.Length)], 2, 8);
+            var speciesRngID = SpeciesName.GetSpeciesID(speciesRng);
+            FormOutput(speciesRngID, 0, out string[] forms);
 
             if (speciesRng.Contains("Nidoran"))
                 speciesRng = speciesRng.Remove(speciesRng.Length - 1);
 
-            var genderHelper = speciesRng == "Indeedee" || speciesRng == "Nidoran" ? rng.Next(1, 3).ToString() : "";
+            string formHelper = speciesRng switch
+            {
+                "Indeedee" => _ = specificEgg && dittoLoc == 1 ? FormOutput(876, form2, out _) : specificEgg && dittoLoc == 2 ? FormOutput(876, form1, out _) : FormOutput(876, rng.Next(2), out _),
+                "Nidoran" => _ = specificEgg && dittoLoc == 1 ? (species2 == 32 ? "-M" : "-F") : specificEgg && dittoLoc == 2 ? (species1 == 32 ? "-M" : "-F") : (rng.Next(2) == 0 ? "-M" : "-F"),
+                _ => FormOutput(SpeciesName.GetSpeciesID(speciesRng), specificEgg && form1.Equals(form2) ? form1 : specificEgg && dittoLoc == 1 ? form2 : specificEgg && dittoLoc == 2 ? form1 : rng.Next(forms.Length), out _),
+            };
 
-            var set = new ShowdownSet($"Egg({speciesRng}{(genderHelper == "1" ? "-M" : "-F")}){(ballRng.Contains("Cherish") || Pokeball.Contains(SpeciesName.GetSpeciesID(speciesRng)) ? "\nBall: Poke" : ballRng)}\n{string.Join("\n", trainerInfo)}");
+            var set = new ShowdownSet($"Egg({speciesRng}{formHelper}){(ballRng.Contains("Cherish") || Pokeball.Contains(SpeciesName.GetSpeciesID(speciesRng)) ? "\nBall: Poke" : ballRng)}\n{string.Join("\n", trainerInfo)}");
             var template = AutoLegalityWrapper.GetTemplate(set);
             var sav = AutoLegalityWrapper.GetTrainerInfo(8);
             var pkm = sav.GetLegal(template, out _);
 
-            if (pkm.PersonalInfo.HasFormes && pkm.Species != (int)Species.Sinistea && pkm.Species != (int)Species.Indeedee)
+            if (!specificEgg && pkm.PersonalInfo.HasFormes && pkm.Species != (int)Species.Sinistea && pkm.Species != (int)Species.Indeedee)
                 pkm.AltForm = rng.Next(pkm.PersonalInfo.FormeCount);
 
             if (pkm.Species == (int)Species.Rotom)
@@ -255,7 +261,6 @@ namespace SysBot.Pokemon
             pkm.Nature = rng.Next(25);
             pkm.StatNature = pkm.Nature;
             pkm.IVs = pkm.SetRandomIVs(4);
-            pkm.ClearHyperTraining();
 
             if (!pkm.ValidBall())
                 BallApplicator.ApplyBallLegalRandom(pkm);
@@ -364,16 +369,25 @@ namespace SysBot.Pokemon
             return list;
         }
 
-        public static string FormOutput(PKM pkm)
+        public static string FormOutput(int species, int form, out string[] formString)
         {
             var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
-            var formString = FormConverter.GetFormList(pkm.Species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
+            formString = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
 
-            if (formString[pkm.AltForm] == "Normal" || formString[pkm.AltForm].Contains("-") && pkm.Species != (int)Species.Zygarde || formString[pkm.AltForm] == "")
-                formString[pkm.AltForm] = "";
-            else formString[pkm.AltForm] = "-" + formString[pkm.AltForm];
+            if (formString[form] == "Normal" || formString[form].Contains("-") && species != (int)Species.Zygarde || formString[form] == "")
+                formString[form] = "";
+            else formString[form] = "-" + formString[form];
 
-            return formString[pkm.AltForm];
+            return formString[form];
+        }
+
+        private static int DittoSlot(int species1, int species2)
+        {
+            if (species1 == 132 && species2 != 132)
+                return 1;
+            else if (species2 == 132 && species1 != 132)
+                return 2;
+            else return 0;
         }
 
         public static void EncounterLogs(PK8 pk)
@@ -386,7 +400,7 @@ namespace SysBot.Pokemon
             }
 
             var content = File.ReadAllText("EncounterLog.txt").Split('\n').ToList();
-            var form = FormOutput(pk);
+            var form = FormOutput(pk.Species, pk.AltForm, out _);
             var speciesName = SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, 8) + (pk.Species == (int)Species.Sinistea ? "" : form);
             var index = content.FindIndex(2, x => x.Contains(speciesName));
             var split = index != -1 ? content[index].Split('_') : new string[] { };

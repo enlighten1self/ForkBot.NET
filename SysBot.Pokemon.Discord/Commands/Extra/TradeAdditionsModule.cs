@@ -93,15 +93,15 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
-            int.TryParse(content[0], out int catchID);
             var rng = new Random();
+            var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
             var speciesZukan = Zukan8.GetRawIndexes(PersonalTable.SWSH, 2);
             var speciesRng = speciesZukan[rng.Next(speciesZukan.Count)].Species;
             var catchRng = rng.Next(101);
             var eggRng = rng.Next(101);
             PKM eggPkm = new PK8();
-            bool egg = content[1] != "0" && content[2] != "0" && CanGenerateEgg(content, out _, out _, out _, out _, out _, out _) && eggRng > 75;
+            int form1 = 0, form2 = 0, id1 = 0, id2 = 0;
+            bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out id1, out id2) && eggRng > 25;
             List<string> trainerInfo = new List<string>();
 
             for (int i = 3; i < 8; i++)
@@ -112,7 +112,7 @@ namespace SysBot.Pokemon.Discord
 
             if (egg)
             {
-                eggPkm = TradeExtensions.EggRngRoutine(content, trainerInfo);
+                eggPkm = TradeExtensions.EggRngRoutine(content, trainerInfo, form1, form2, id1, id2);
                 var laEgg = new LegalityAnalysis(eggPkm);
                 var invalidEgg = !(eggPkm is PK8) || (!laEgg.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality);
                 if (invalidEgg)
@@ -158,7 +158,7 @@ namespace SysBot.Pokemon.Discord
                 var pkm = sav.GetLegal(template, out _);
 
                 TradeExtensions.RngRoutine(pkm);
-                var form = nidoranGender != string.Empty ? nidoranGender : TradeExtensions.FormOutput(pkm);
+                var form = nidoranGender != string.Empty ? nidoranGender : TradeExtensions.FormOutput(pkm.Species, pkm.AltForm, out _);
 
                 if (pkm.Species == (int)Species.Pikachu && pkm.AltForm == 0 && shinyRng > 95)
                     CommonEdits.SetShiny(pkm, Shiny.Random);
@@ -171,9 +171,7 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                catchID++;
-                content[0] = catchID.ToString();
-                File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
+                CatchIncrement(content, user, out int catchID);
                 pkm.ResetPartyStats();
                 TradeCordDump("TradeCord", user, pkm, out int index);
 
@@ -186,11 +184,9 @@ namespace SysBot.Pokemon.Discord
 
                 if (egg)
                 {
-                    catchID++;
-                    content[0] = catchID.ToString();
                     var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(eggPkm.Species, 2, 8);
-                    var eggForm = TradeExtensions.FormOutput(eggPkm);
-                    File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
+                    var eggForm = TradeExtensions.FormOutput(eggPkm.Species, eggPkm.AltForm, out _);
+                    CatchIncrement(content, user, out _);
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
                     catchName = catchName + "&" + "\nEggs";
                     catchMsg = catchMsg + "&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" + 
@@ -214,11 +210,9 @@ namespace SysBot.Pokemon.Discord
 
                 if (egg)
                 {
-                    catchID++;
-                    content[0] = catchID.ToString();
                     var eggSpeciesName = SpeciesName.GetSpeciesNameGeneration(eggPkm.Species, 2, 8);
-                    var eggForm = TradeExtensions.FormOutput(eggPkm);
-                    File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
+                    var eggForm = TradeExtensions.FormOutput(eggPkm.Species, eggPkm.AltForm, out _);
+                    CatchIncrement(content, user, out _);
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
                     failName = failName + "&" + "\nEggs";
                     failMsg = failMsg + "&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
@@ -246,7 +240,7 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (path.Count == 0)
             {
                 await Context.Message.Channel.SendMessageAsync("There is no Pokémon with this ID.").ConfigureAwait(false);
@@ -255,9 +249,10 @@ namespace SysBot.Pokemon.Discord
 
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
             string? idCheck = FavoritesCheck(content).Find(x => x.Replace("★", "").Equals(id));
-            if (idCheck != null)
+            var dcCheck = content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id) || content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id);
+            if (idCheck != null || dcCheck)
             {
-                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites before trading!").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites and daycare before trading!").ConfigureAwait(false);
                 return;
             }
 
@@ -289,7 +284,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var code = Info.GetRandomTradeCode();
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (path.Count == 0)
             {
                 await Context.Message.Channel.SendMessageAsync("There is no Pokémon with this ID.").ConfigureAwait(false);
@@ -298,9 +293,10 @@ namespace SysBot.Pokemon.Discord
 
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
             string? idCheck = FavoritesCheck(content).Find(x => x.Replace("★", "").Equals(id));
-            if (idCheck != null)
+            var dcCheck = content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id) || content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id);
+            if (idCheck != null || dcCheck)
             {
-                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites before trading!").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites and daycare before trading!").ConfigureAwait(false);
                 return;
             }
 
@@ -334,7 +330,7 @@ namespace SysBot.Pokemon.Discord
                 list.Add(sanitize.Remove(sanitize.IndexOf(".pk8")));
             }
 
-            var countTemp = list.FindAll(x => x.Contains(name));
+            var countTemp = name != "Egg" ? list.FindAll(x => x.Split(' ')[0].Contains(name) || x.Split(' ')[2].Equals(name)) : list.FindAll(x => x.Contains(name));
             var count = new List<string>();
             var countAll = new List<string>();
             var countSh = new List<string>();
@@ -374,7 +370,7 @@ namespace SysBot.Pokemon.Discord
             {
                 foreach (var line in countTemp)
                 {
-                    var sort = line.Split('-')[0].Trim();
+                    var sort = line.Split('-', '_')[0].Trim();
 
                     if (sort.Contains("★"))
                         countSh.Add(sort);
@@ -382,7 +378,7 @@ namespace SysBot.Pokemon.Discord
                 }
             }
 
-            var entry = string.Join(", ", name == "Shinies" ? countSh.OrderBy(x => x.Contains('★') ? x.Substring(1, 2) : x.Substring(0, 1)) : name == "All" ? countAll.OrderBy(x => x.Contains('★') ? x.Substring(1, 2) : x.Substring(0, 1)) : count.OrderBy(x => x.Contains('★') ? int.Parse(x.Split('★')[1]) : int.Parse(x)));
+            var entry = string.Join(", ", name == "Shinies" ? countSh.OrderBy(x => x.Contains('★') ? x.Substring(1, 2) : x.Substring(0, 1)) : name == "All" ? countAll.OrderBy(x => x.Contains('★') ? x.Substring(1, 2) : x.Substring(0, 1)) : count.OrderBy(x => x.Contains('★') ? int.Parse(x.Split('★')[1].Split('_')[0]) : int.Parse(x.Split('_')[0])));
             if (entry == "")
             {
                 await Context.Message.Channel.SendMessageAsync("No results found.").ConfigureAwait(false);
@@ -409,7 +405,7 @@ namespace SysBot.Pokemon.Discord
             }
 
             var user = Context.User.Id.ToString();
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (path.Count == 0)
             {
                 await Context.Message.Channel.SendMessageAsync("Could not find this ID.").ConfigureAwait(false);
@@ -426,7 +422,7 @@ namespace SysBot.Pokemon.Discord
             bool canGmax = new ShowdownSet(ShowdownSet.GetShowdownText(pkm)).CanGigantamax;
             var pokeImg = PokeImg(pkm, canGmax, pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : (uint)0);
             var split = path[0].Split('\\')[2].Split('-');
-            var form = TradeExtensions.FormOutput(pkm);
+            var form = TradeExtensions.FormOutput(pkm.Species, pkm.AltForm, out _);
             var embed = new EmbedBuilder { Color = pkm.IsShiny ? Color.Blue : Color.DarkBlue, ThumbnailUrl = pokeImg };
             var name = $"{Context.User.Username}'s {(pkm.IsShiny ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{form} [ID: {id}]";
             var value = $"\n{ReusableActions.GetFormattedShowdownText(pkm)}";
@@ -446,17 +442,17 @@ namespace SysBot.Pokemon.Discord
             var id2 = content[2].Split('_')[content[2].Contains("★") ? 1 : 0];
             var favorites = FavoritesCheck(content);
             List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Split('\\')[2].Contains("★") && !x.Split('\\')[2].Contains("Ditto") &&
-            !x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id1) && !x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id2)).ToList();
+            !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id1) && !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id2) && !x.Split('\\')[2].Split(' ')[0].Split('_')[1].Equals("Cherish")).ToList();
 
             foreach (var fav in favorites)
             {
-                var match = path.Find(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim() == fav.Replace("★", "").Trim());
+                var match = path.Find(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim() == fav.Replace("★", "").Trim());
                 path.Remove(match);
             }
 
             if (path.Count == 0)
             {
-                await Context.Message.Channel.SendMessageAsync("Cannot find any more non-shiny, non-Ditto, non-favorite Pokémon to release.").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync("Cannot find any more non-shiny, non-Ditto, non-favorite, non-event Pokémon to release.").ConfigureAwait(false);
                 return;
             }
 
@@ -465,7 +461,7 @@ namespace SysBot.Pokemon.Discord
 
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
             var name = $"{Context.User.Username}'s Mass Release";
-            var value = $"Every non-shiny Pokémon was released, excluding Ditto, favorites, and those in daycare.";
+            var value = $"Every non-shiny Pokémon was released, excluding Ditto, favorites, events, and those in daycare.";
             await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
@@ -484,18 +480,18 @@ namespace SysBot.Pokemon.Discord
 
             var user = Context.User.Id.ToString();
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (path.Count == 0)
             {
                 await Context.Message.Channel.SendMessageAsync("Cannot find this Pokémon.").ConfigureAwait(false);
                 return;
             }
 
-            if (content[1] != "0" || content[2] != "0")
+            if (content[1] != "0-0" || content[2] != "0-0")
             {
                 var shiny1 = content[1].Contains("★");
                 var shiny2 = content[2].Contains("★");
-                if (content[1].Split('_')[shiny1 ? 1 : 0].Equals(id) || content[2].Split('_')[shiny2 ? 1 : 0].Equals(id))
+                if (content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id) || content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id))
                 {
                     await Context.Message.Channel.SendMessageAsync("Cannot release a Pokémon in daycare.").ConfigureAwait(false);
                     return;
@@ -527,30 +523,30 @@ namespace SysBot.Pokemon.Discord
         {
             TradeCordParanoiaChecks(Context);
             var content = File.ReadAllText($"TradeCord\\{Context.User.Id}.txt").Split(',').ToList();
-            if (content[1] == "0" && content[2] == "0")
+            if (content[1] == "0-0" && content[2] == "0-0")
             {
                 await Context.Message.Channel.SendMessageAsync("You do not have anything in daycare.").ConfigureAwait(false);
                 return;
             }
 
-            bool canGenerateEgg = CanGenerateEgg(content, out string[] split1, out string[] split2, out string form1, out string form2, out int speciesID1, out int speciesID2);
+            bool canGenerateEgg = CanGenerateEgg(content, out string[] split1, out string[] split2, out int form1, out int form2, out int speciesID1, out int speciesID2);
             var shiny1 = split1.Contains("★");
             var shiny2 = split2.Contains("★");
             string dcSpecies1 = "";
             string dcSpecies2 = "";
             string msg = "";
 
-            if (content[1] != "0")
-                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID1, 2, 8)}{form1} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
+            if (content[1] != "0-0")
+                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0].Split('-')[0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID1, 2, 8)}{TradeExtensions.FormOutput(speciesID1, form1, out _)} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
 
-            if (content[2] != "0")
-                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID2, 2, 8)}{form2} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
+            if (content[2] != "0-0")
+                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0].Split('-')[0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID2, 2, 8)}{TradeExtensions.FormOutput(speciesID2, form2, out _)} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
 
-            if (content[1] != "0" && content[2] != "0")
+            if (content[1] != "0-0" && content[2] != "0-0")
                 msg = $"{dcSpecies1}\n{dcSpecies2}{(canGenerateEgg ? "\n\nThey seem to really like each other." : "\n\nThey don't really seem to be fond of each other. Make sure they're base evolution and can be eggs!")}";
-            else if (content[1] == "0" && content[2] != "0")
+            else if (content[1] == "0-0" && content[2] != "0-0")
                 msg = $"{dcSpecies2}\n\nIt seems lonely.";
-            else if (content[2] == "0" && content[1] != "0")
+            else if (content[2] == "0-0" && content[1] != "0-0")
                 msg = $"{dcSpecies1}\n\nIt seems lonely.";
 
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
@@ -577,7 +573,7 @@ namespace SysBot.Pokemon.Discord
             action = action.ToLower();
             if (action == "w" || action == "withdraw")
             {
-                if (content[1] == "0" && content[2] == "0")
+                if (content[1] == "0-0" && content[2] == "0-0")
                 {
                     await Context.Message.Channel.SendMessageAsync("You do not have anything in daycare.").ConfigureAwait(false);
                     return;
@@ -585,31 +581,31 @@ namespace SysBot.Pokemon.Discord
 
                 bool shiny1 = content[1].Contains("★");
                 bool shiny2 = content[2].Contains("★");
-                var id1 = content[1] != "0" ? content[1].Split('_')[shiny1 ? 1 : 0].Trim() : "";
-                var id2 = content[2] != "0" ? content[2].Split('_')[shiny2 ? 1 : 0].Trim() : "";
+                var id1 = content[1] != "0-0" ? content[1].Split('_')[shiny1 ? 1 : 0].Split('-')[0].Trim() : "";
+                var id2 = content[2] != "0-0" ? content[2].Split('_')[shiny2 ? 1 : 0].Split('-')[0].Trim() : "";
                 List<string> species = new List<string>();
                 if (id != "All")
                 {
                     if (id1.Equals(id))
                     {
                         species.Add(content[1].Split('_')[shiny1 ? 2 : 1].Trim());
-                        content[1] = "0";
+                        content[1] = "0-0";
                     }
                     else if (id2.Equals(id))
                     {
                         species.Add(content[2].Split('_')[shiny2 ? 2 : 1].Trim());
-                        content[2] = "0";
+                        content[2] = "0-0";
                     }
                 }
                 else
                 {
-                    if (content[1] != "0")
+                    if (content[1] != "0-0")
                         species.Add(content[1].Split('_')[shiny1 ? 2 : 1].Trim());
                     
-                    if (content[2] != "0")
+                    if (content[2] != "0-0")
                         species.Add(content[2].Split('_')[shiny2 ? 2 : 1].Trim());
 
-                    content[1] = content[2] = "0";
+                    content[1] = content[2] = "0-0";
                 }
 
                 if (species.Count < 1)
@@ -620,9 +616,9 @@ namespace SysBot.Pokemon.Discord
                 else File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
 
                 var species1 = SpeciesName.GetSpeciesNameGeneration(int.Parse(species[0].Split('-')[0].Trim()), 2, 8);
-                var form1 = species[0].Contains("-") ? "-" + species[0].Split('-')[1].Trim() : "";
+                var form1 = TradeExtensions.FormOutput(int.Parse(species[0].Split('-')[0].Trim()), int.Parse(species[0].Split('-')[1].Trim()), out _);
                 var species2 = species.Count > 1 ? SpeciesName.GetSpeciesNameGeneration(int.Parse(species[1].Split('-')[0].Trim()), 2, 8) : "";
-                var form2 = species.Count > 1 && species[1].Contains("-") ? "-" + species[1].Split('-')[1].Trim() : "";
+                var form2 = species.Count > 1 ? TradeExtensions.FormOutput(int.Parse(species[1].Split('-')[0].Trim()), int.Parse(species[1].Split('-')[1].Trim()), out _) : "";
                 var embedWithdraw = new EmbedBuilder { Color = Color.DarkBlue };
                 var nameWithdraw = $"{Context.User.Username}'s Daycare Withdraw";
                 var valueWithdraw = $"{(id != "All" ? $"You withdrew your [ID: {id}] {species1}{form1} from the daycare." : $"You withdrew your [ID: {(id1 != "" ? id1 : id2)}] {species1}{form1}{(species.Count > 1 ? $" and [ID: {id2}] {species2}{form2}" : "")} from the daycare.")}";
@@ -631,13 +627,13 @@ namespace SysBot.Pokemon.Discord
             }
             else if (action == "d" || action == "deposit")
             {
-                List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
-                if (!path[0].Split('\\')[2].Contains(id))
+                List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
+                if (path.Count == 0)
                 {
                     await Context.Message.Channel.SendMessageAsync("There is no Pokémon with this ID.").ConfigureAwait(false);
                     return;
                 }
-                else if (content[1] != "0" && content[2] != "0")
+                else if (content[1] != "0-0" && content[2] != "0-0")
                 {
                     await Context.Message.Channel.SendMessageAsync("Daycare full, please withdraw something first.").ConfigureAwait(false);
                     return;
@@ -650,13 +646,12 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var form = TradeExtensions.FormOutput(pkm);
-                if (content[1] == "0" && content[2] != "0" && !content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id))
-                    content[1] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + form + "_" + pkm.Ball;
-                else if (content[2] == "0" && content[1] != "0" && !content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id))
-                    content[2] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + form + "_" + pkm.Ball;
-                else if (content[1] == "0" && content[2] == "0")
-                    content[1] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + form + "_" + pkm.Ball;
+                if (content[1] == "0-0" && content[2] != "0-0" && !content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id))
+                    content[1] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + "-" + pkm.AltForm + "_" + pkm.Ball;
+                else if (content[2] == "0-0" && content[1] != "0-0" && !content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id))
+                    content[2] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + "-" + pkm.AltForm + "_" + pkm.Ball;
+                else if (content[1] == "0-0" && content[2] == "0-0")
+                    content[1] = (pkm.IsShiny ? "★_" : "") + id + "_" + pkm.Species + "-" + pkm.AltForm + "_" + pkm.Ball;
                 else
                 {
                     await Context.Message.Channel.SendMessageAsync("You've already deposited that Pokémon to daycare.").ConfigureAwait(false);
@@ -664,7 +659,7 @@ namespace SysBot.Pokemon.Discord
                 }
 
                 File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
-                var speciesStr = $"{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{form}({(Ball)pkm.Ball})";
+                var speciesStr = $"{SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8)}{TradeExtensions.FormOutput(pkm.Species, pkm.AltForm, out _)}({(Ball)pkm.Ball})";
                 var embedDeposit = new EmbedBuilder { Color = Color.DarkBlue };
                 var nameDeposit = $"{Context.User.Username}'s Daycare Deposit";
                 var valueDeposit = $"Deposited your {(pkm.IsShiny ? "★" + speciesStr : speciesStr)} to daycare!";
@@ -681,7 +676,7 @@ namespace SysBot.Pokemon.Discord
         {
             TradeCordParanoiaChecks(Context);
             var user = Context.User.Id.ToString();
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('-')[0].Trim().Equals(id) : x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('_')[0].Trim().Equals(id) : x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (!int.TryParse(id, out int _int))
             {
                 await Context.Message.Channel.SendMessageAsync("Please enter a numerical catch ID.").ConfigureAwait(false);
@@ -709,22 +704,22 @@ namespace SysBot.Pokemon.Discord
 
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
             string? idCheck = FavoritesCheck(content).Find(x => x.Replace("★", "").Equals(id));
-            if (idCheck != null)
+            var dcCheck = content[1].Split('_')[content[1].Contains("★") ? 1 : 0].Equals(id) || content[2].Split('_')[content[2].Contains("★") ? 1 : 0].Equals(id);
+            if (idCheck != null || dcCheck)
             {
-                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites before gifting!").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync("Please remove your Pokémon from favorites and daycare before gifting!").ConfigureAwait(false);
                 return;
             }
 
-            var split = path[0].Split('\\')[2].Split('-');
+            var split = path[0].Split('\\')[2].Split('_');
             var oldname = split[0].Replace("★", "").Trim().Substring(0, id.Length);
-            var newIDparse = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim()).ToArray();
+            var newIDparse = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split(' ', '_')[0].Replace("★", "").Trim()).ToArray();
             var newID = newIDparse.OrderBy(x => int.Parse(x)).ToArray();
-            File.Move(path[0], $"{dir}\\{path[0].Split('\\')[2].Replace(oldname, Indexing(newID).ToString())}");
-
-            var sanitize = split.Length > 2 ? (split[1] + "-" + split[2]).Split('.')[0].Trim() : split[1].Trim();
+            var sanitize = split[1].Split(' ')[2].Trim();
             var embed = new EmbedBuilder { Color = Color.Purple };
             var name = $"{Context.User.Username}'s Gift";
-            var value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize.Split('.')[0] + "**" : sanitize.Split('.')[0])} to {Context.Message.MentionedUsers.First().Username}.";
+            var value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize + "**" : sanitize)} to {Context.Message.MentionedUsers.First().Username}.";
+            File.Move(path[0], $"{dir}\\{path[0].Split('\\')[2].Replace(oldname, Indexing(newID).ToString())}");
             await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
@@ -835,10 +830,10 @@ namespace SysBot.Pokemon.Discord
             List<string> names = new List<string>();
             foreach (var fav in favorites)
             {
-                List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('-')[0].Trim().Equals(fav) : x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(fav.Replace("★", "").Trim())).ToList();
-                var split = path[0].Split('\\')[2].Trim();
-                names.Add(split.Split('-').Length > 2 ? $"[ID: {fav}] " + split.Split('-')[1].Trim() + "-" + split.Split('-')[2].Replace(".pk8", "").Replace("(Egg)", "").Trim() :
-                    $"[ID: {fav}] " + split.Split('-')[1].Replace(".pk8", "").Replace("(Egg)", "").Trim());
+                List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('_')[0].Trim().Equals(fav) : x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(fav.Replace("★", "").Trim())).ToList();
+                var split = path[0].Split('\\')[2].Split('-');
+                names.Add(split.Length > 2 ? $"[ID: {fav}] " + split[1].Trim() + "-" + split[2].Replace(".pk8", "").Replace("(Egg)", "").Trim() :
+                    $"[ID: {fav}] " + split[1].Replace(".pk8", "").Replace("(Egg)", "").Trim());
             }
 
             var entry = string.Join(", ", names);
@@ -861,7 +856,7 @@ namespace SysBot.Pokemon.Discord
 
             var user = Context.User.Id.ToString();
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('-')[0].Trim().Equals(id) : x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim().Equals(id)).ToList();
+            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('_')[0].Trim().Equals(id) : x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id)).ToList();
             if (path.Count == 0)
             {
                 await Context.Message.Channel.SendMessageAsync("Cannot find this Pokémon.").ConfigureAwait(false);
@@ -871,14 +866,14 @@ namespace SysBot.Pokemon.Discord
             var favorites = FavoritesCheck(content);
             string? fav = favorites.Count > 0 ? favorites.Find(x => x.Replace("★", "").Trim().Equals(id)) : "";
             fav = fav != null ? fav.Replace("★", "").Trim() : fav;
-            var split = path[0].Split('\\')[2];
-            var name = split.Split('-').Length > 2 ? split.Split('-')[1].Trim() + "-" + split.Split('-')[2].Replace(".pk8", "").Trim() : split.Split('-')[1].Replace(".pk8", "").Trim();
+            var split = path[0].Split('\\')[2].Split('-');
+            var name = split.Length > 2 ? split[1].Trim() + "-" + split[2].Replace(".pk8", "").Trim() : split[1].Replace(".pk8", "").Trim();
 
             if (fav != id)
             {
-                content.Add(split.Split('.')[0].Split('-')[0].Trim());
+                content.Add(split[0].Contains("★") ? "★" + id : id);
                 File.WriteAllText($"TradeCord\\{Context.User.Id}.txt", string.Join(",", content));
-                await Context.Message.Channel.SendMessageAsync($"{Context.User.Username}, added your {(split.Contains("★") ? "★**" + name + "**" : name)} to favorites!").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync($"{Context.User.Username}, added your {(split[0].Contains("★") ? "★**" + name + "**" : name)} to favorites!").ConfigureAwait(false);
                 return;
             }
             else if (fav == id)
@@ -890,7 +885,7 @@ namespace SysBot.Pokemon.Discord
                 }
 
                 File.WriteAllText($"TradeCord\\{Context.User.Id}.txt", string.Join(",", content));
-                await Context.Message.Channel.SendMessageAsync($"{Context.User.Username}, removed your {(split.Contains("★") ? "★**" + name + "**" : name)} from favorites!").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync($"{Context.User.Username}, removed your {(split[0].Contains("★") ? "★**" + name + "**" : name)} from favorites!").ConfigureAwait(false);
                 return;
             }
         }
@@ -899,19 +894,18 @@ namespace SysBot.Pokemon.Discord
         {
             var dir = Path.Combine(folder, subfolder);
             Directory.CreateDirectory(dir);
-            var split = pkm.FileName.Split('-');
             var speciesName = SpeciesName.GetSpeciesNameGeneration(pkm.Species, 2, 8);
-            var form = TradeExtensions.FormOutput(pkm);
+            var form = TradeExtensions.FormOutput(pkm.Species, pkm.AltForm, out _);
             if (speciesName.Contains("Nidoran"))
             {
                 speciesName = speciesName.Remove(speciesName.Length - 1);
                 form = pkm.Species == (int)Species.NidoranF ? "-F" : "-M";
             }
 
-            var array = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split('-')[0].Replace("★", "").Trim()).ToArray();
+            var array = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split('-', '_')[0].Replace("★", "").Trim()).ToArray();
             array = array.OrderBy(x => int.Parse(x)).ToArray();
             index = Indexing(array);
-            var newname = (pkm.IsShiny ? "★" + index.ToString() : index.ToString()) + " - " + speciesName + form  + $"{(pkm.IsEgg ? " (Egg)" : "")}" + ".pk8";
+            var newname = (pkm.IsShiny ? "★" + index.ToString() : index.ToString()) + $"_{(Ball)pkm.Ball}" + " - " + speciesName + form  + $"{(pkm.IsEgg ? " (Egg)" : "")}" + ".pk8";
             var fn = Path.Combine(dir, Util.CleanFileName(newname));
             File.WriteAllBytes(fn, pkm.DecryptedPartyData);
         }
@@ -961,7 +955,7 @@ namespace SysBot.Pokemon.Discord
             if (!File.Exists($"TradeCord\\{user}.txt"))
             {
                 File.Create($"TradeCord\\{user}.txt").Close();
-                File.WriteAllText($"TradeCord\\{user}.txt", "0,0,0,0,0,0,0,0");
+                File.WriteAllText($"TradeCord\\{user}.txt", "0,0-0,0-0,0,0,0,0,0");
             }
 
             var content = File.ReadAllText($"TradeCord\\{user}.txt").Split(',').ToList();
@@ -976,27 +970,64 @@ namespace SysBot.Pokemon.Discord
                 content.Insert(7, "0");
                 File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
             }
+
+            var parseForm = content[1].Contains("-") && int.TryParse(content[1].Split('-')[1].Split('_')[0], out _) && content[2].Contains("-") && int.TryParse(content[2].Split('-')[1].Split('_')[0], out _);
+            if (!parseForm)
+            {
+                for (int i = 1; i < 3; i++)
+                {
+                    var split = content[i].Split('_');
+                    if (split.Length > 1)
+                    {
+                        var splitID = split[content[i].Contains("★") ? 1 : 0];
+                        var splitSpecies = split[content[i].Contains("★") ? 2 : 1].Split('-')[0];
+                        var splitForm = content[i].Contains("-") ? content[i].Split('-')[1].Split('_')[0] : "";
+                        var splitBall = split[content[i].Contains("★") ? 3 : 2];
+                        TradeExtensions.FormOutput(int.Parse(splitSpecies), 0, out string[] formArray);
+                        var form = formArray.ToList().FindIndex(x => x.Contains(splitForm));
+                        content[i] = (content[i].Contains("★") ? "★_" : "") + splitID + "_" + splitSpecies + "-" + (int.TryParse(splitForm, out _) ? splitForm : (form == -1 ? 0 : form).ToString()) + "_" + splitBall;
+                    }
+                    else content[i] = "0-0";
+                }
+                File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
+            }
+
+            var parseBall = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => x.Contains(".pk8")).ToList();
+            if (!parseBall.All(x => x.Contains('_')))
+            {
+                foreach (var line in parseBall)
+                {
+                    if (!line.Contains('_'))
+                    {
+                        var pkm = PKMConverter.GetPKMfromBytes(File.ReadAllBytes(line));
+                        if (pkm == null)
+                            break;
+
+                        var ball = $"_{(Ball)pkm.Ball}" ?? "_";
+                        var newName = line.Replace(line.Split(' ')[0].Trim(), $" {line.Split(' ')[0] + ball} ".Trim());
+                        File.Move(line, newName);
+                    }                    
+                }
+            }
         }
 
-        private bool CanGenerateEgg(List<string> content, out string[] split1, out string[] split2, out string form1, out string form2, out int speciesID1, out int speciesID2)
+        private bool CanGenerateEgg(List<string> content, out string[] split1, out string[] split2, out int form1, out int form2, out int speciesID1, out int speciesID2)
         {
             split1 = content[1].Split('_');
             split2 = content[2].Split('_');
-            var shiny1 = split1.Contains("★");
-            var shiny2 = split2.Contains("★");
-            form1 = form2 = string.Empty;
+            form1 = form2 = 0;
             speciesID1 = speciesID2 = 0;
 
-            if (content[1] != "0")
+            if (content[1] != "0-0")
             {
-                form1 = split1[shiny1 ? 2 : 1].Contains("-") ? "-" + split1[shiny1 ? 2 : 1].Split('-')[1].Trim() : "";
-                speciesID1 = int.Parse(form1 != "" ? split1[shiny1 ? 2 : 1].Replace(form1, "").Trim() : split1[shiny1 ? 2 : 1]);
+                form1 = int.Parse(content[1].Split('-')[1].Split('_')[0]);
+                speciesID1 = int.Parse(content[1].Split('-')[0].Split('_').LastOrDefault());
             }
 
-            if (content[2] != "0")
+            if (content[2] != "0-0")
             {
-                form2 = split2[shiny2 ? 2 : 1].Contains("-") ? "-" + split2[shiny2 ? 2 : 1].Split('-')[1].Trim() : "";
-                speciesID2 = int.Parse(form2 != "" ? split2[shiny2 ? 2 : 1].Replace(form2, "").Trim() : split2[shiny2 ? 2 : 1]);
+                form2 = int.Parse(content[2].Split('-')[1].Split('_')[0]);
+                speciesID2 = int.Parse(content[2].Split('-')[0].Split('_').LastOrDefault());
             }
 
             if (speciesID1 == 132 && speciesID2 == 132)
@@ -1004,6 +1035,8 @@ namespace SysBot.Pokemon.Discord
             else if (speciesID1 == speciesID2 && TradeExtensions.ValidEgg.Contains(speciesID1))
                 return true;
             else if ((speciesID1 == 132 || speciesID2 == 132) && (TradeExtensions.ValidEgg.Contains(speciesID1) || TradeExtensions.ValidEgg.Contains(speciesID2)))
+                return true;
+            else if ((speciesID1 == 29 || speciesID2 == 32) && (speciesID1 == 29 || speciesID2 == 32))
                 return true;
             else return false;
         }
@@ -1050,7 +1083,7 @@ namespace SysBot.Pokemon.Discord
             var formEdgeCaseRng = rng.Next(2);
             string[] poipoleRng = { "Poke", "Beast", "Cherish" };
             var eventRng = rng.Next(101);
-            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
+            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || (speciesRng == (int)Species.Melmetal && gmaxRng > 70) || TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
 
             if (ballRng.Contains("Cherish"))
             {
@@ -1074,7 +1107,7 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Suicune: _ = shinyRng > 95 ? formHack = "\nRelaxed Nature" : formHack = ""; break;
                     case (int)Species.Tangrowth: formHack = "\nBrave Nature"; break;
                     case (int)Species.Pichu: _ = shinyRng > 95 ? formHack = "\nJolly Nature" : formHack = ""; break;
-                    //case (int)Species.Melmetal: _ = gmaxRng > 70 ? formHack = "-Gmax" : formHack = ""; break;
+                    case (int)Species.Melmetal: _ = gmaxRng > 70 ? formHack = "-Gmax" : formHack = ""; break;
                     case (int)Species.Feebas: formHack = "\nCalm Nature"; break;
                     case (int)Species.Whiscash: formHack = "\nGentle Nature"; break;
                     default: formHack = ""; break;
@@ -1105,8 +1138,8 @@ namespace SysBot.Pokemon.Discord
             switch (speciesRng)
             {
                 case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(poipoleRng.Length)]; break;
-                case (int)Species.Meltan: case (int)Species.Melmetal: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]; break;
-                //case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)])}"; break;
+                case (int)Species.Meltan: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]; break;
+                case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)])}"; break;
             };
 
             if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && ballRng.Contains("Cherish") && shinyRng < 96)
@@ -1258,6 +1291,14 @@ namespace SysBot.Pokemon.Discord
             }
 
             await Context.Message.Channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        }
+
+        private void CatchIncrement(List<string> content, string user, out int catchID)
+        {
+            int.TryParse(content[0].Split('_')[0], out catchID);
+            catchID++;
+            content[0] = catchID.ToString();
+            File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
         }
     }
 }

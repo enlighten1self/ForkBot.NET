@@ -74,7 +74,7 @@ namespace SysBot.Pokemon
         [Category(TimeBias), Description("Checks time elapsed since the user joined the Clone queue, and increases the queue's weight accordingly.")]
         public int YieldMultWaitClone { get; set; } = 1;
 
-        [Category(TimeBias), Description("Checks time elapsed since the user joined the FitOT queue, and increases the queue's weight accordingly.")]
+        [Category(TimeBias), Description("Checks time elapsed since the user joined the FixOT queue, and increases the queue's weight accordingly.")]
         public int YieldMultWaitFixOT { get; set; } = 1;
 
         [Category(TimeBias), Description("Checks time elapsed since the user joined the TradeCord queue, and increases the queue's weight accordingly.")]
