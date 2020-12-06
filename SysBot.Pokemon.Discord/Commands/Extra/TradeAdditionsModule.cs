@@ -715,7 +715,7 @@ namespace SysBot.Pokemon.Discord
             var oldname = split[0].Replace("★", "").Trim().Substring(0, id.Length);
             var newIDparse = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split(' ', '_')[0].Replace("★", "").Trim()).ToArray();
             var newID = newIDparse.OrderBy(x => int.Parse(x)).ToArray();
-            var sanitize = split[1].Split(' ')[2].Trim();
+            var sanitize = split[1].Split(' ')[2].Split('.')[0].Trim();
             var embed = new EmbedBuilder { Color = Color.Purple };
             var name = $"{Context.User.Username}'s Gift";
             var value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize + "**" : sanitize)} to {Context.Message.MentionedUsers.First().Username}.";
