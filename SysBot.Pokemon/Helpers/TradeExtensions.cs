@@ -234,6 +234,7 @@ namespace SysBot.Pokemon
             {
                 "Indeedee" => _ = specificEgg && dittoLoc == 1 ? FormOutput(876, form2, out _) : specificEgg && dittoLoc == 2 ? FormOutput(876, form1, out _) : FormOutput(876, rng.Next(2), out _),
                 "Nidoran" => _ = specificEgg && dittoLoc == 1 ? (species2 == 32 ? "-M" : "-F") : specificEgg && dittoLoc == 2 ? (species1 == 32 ? "-M" : "-F") : (rng.Next(2) == 0 ? "-M" : "-F"),
+                "Sinistea" => "",
                 _ => FormOutput(SpeciesName.GetSpeciesID(speciesRng), specificEgg && form1.Equals(form2) ? form1 : specificEgg && dittoLoc == 1 ? form2 : specificEgg && dittoLoc == 2 ? form1 : rng.Next(forms.Length), out _),
             };
 
