@@ -84,7 +84,7 @@ namespace SysBot.Pokemon
                                         (int)Species.Rockruff, (int)Species.Lycanroc, (int)Species.Salazzle, (int)Species.Bewear, (int)Species.Steenee, (int)Species.Comfey, (int)Species.Turtonator,
                                         (int)Species.Mimikyu, (int)Species.Magearna, (int)Species.Marshadow, (int)Species.Zeraora, (int)Species.Milcery, (int)Species.Zarude, (int)Species.Goomy,
                                         (int)Species.Toxapex, (int)Species.Oranguru, (int)Species.Passimian, (int)Species.Drampa, (int)Species.Naganadel, (int)Species.Tangrowth, (int)Species.Feebas,
-                                        (int)Species.Whiscash, (int)Species.Krabby, (int)Species.Pichu };
+                                        (int)Species.Whiscash, (int)Species.Krabby };
 
         public static int[] CanBeShinyCherish = { (int)Species.Charizard, (int)Species.Pikachu, (int)Species.Machamp, (int)Species.Gengar, (int)Species.Magikarp, (int)Species.Gyarados, (int)Species.Eevee,
                                                   (int)Species.Mewtwo, (int)Species.Tyranitar, (int)Species.HoOh, (int)Species.Celebi, (int)Species.Gardevoir, (int)Species.Milotic,

@@ -1106,7 +1106,8 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Entei: _ = shinyRng > 95 ? formHack = "\nAdamant Nature" : formHack = ""; break;
                     case (int)Species.Suicune: _ = shinyRng > 95 ? formHack = "\nRelaxed Nature" : formHack = ""; break;
                     case (int)Species.Tangrowth: formHack = "\nBrave Nature"; break;
-                    case (int)Species.Pichu: _ = shinyRng > 95 ? formHack = "\nJolly Nature" : formHack = ""; break;
+                    case (int)Species.Pichu: formHack = "\nJolly Nature"; break;
+                    case (int)Species.Octillery: formHack = "\nSerious Nature"; break;
                     case (int)Species.Melmetal: _ = gmaxRng > 70 ? formHack = "-Gmax" : formHack = ""; break;
                     case (int)Species.Feebas: formHack = "\nCalm Nature"; break;
                     case (int)Species.Whiscash: formHack = "\nGentle Nature"; break;
