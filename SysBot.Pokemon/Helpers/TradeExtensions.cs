@@ -127,7 +127,7 @@ namespace SysBot.Pokemon
         public static void RngRoutine(PKM pkm)
         {
             var rng = new Random();
-            var troublesomeAltForms = pkm.Species == (int)Species.Marowak || pkm.Species == (int)Species.Raichu || pkm.Species == (int)Species.Giratina || pkm.Species == (int)Species.Silvally ||
+            var troublesomeAltForms = pkm.Species == (int)Species.Raichu || pkm.Species == (int)Species.Giratina || pkm.Species == (int)Species.Silvally ||
                                       pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Articuno || pkm.Species == (int)Species.Zapdos || pkm.Species == (int)Species.Moltres;
 
             pkm.AltForm = pkm.Species == (int)Species.Silvally || pkm.Species == (int)Species.Genesect || pkm.Species == (int)Species.Giratina ? rng.Next(pkm.PersonalInfo.FormeCount) : pkm.AltForm;
@@ -149,7 +149,6 @@ namespace SysBot.Pokemon
                 switch (pkm.Species)
                 {
                     case 26: pkm.Met_Location = 162; pkm.Met_Level = 25; pkm.EggMetDate = null; pkm.Egg_Day = 0; pkm.Egg_Location = 0; pkm.Egg_Month = 0; pkm.Egg_Year = 0; pkm.EncounterType = 0; break;
-                    case 105: pkm.Met_Location = 244; pkm.Met_Level = 65; pkm.EggMetDate = null; pkm.Egg_Day = 0; pkm.Egg_Location = 0; pkm.Egg_Month = 0; pkm.Egg_Year = 0; pkm.EncounterType = 0; break;
                     case 144: pkm.Met_Location = 208; pkm.SetIsShiny(false); break;
                     case 145: pkm.Met_Location = 122; pkm.SetIsShiny(false); break;
                     case 146: pkm.Met_Location = 164; pkm.SetIsShiny(false); break;

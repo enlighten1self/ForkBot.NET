@@ -316,10 +316,16 @@ namespace SysBot.Pokemon.Discord
         [Alias("l", "list")]
         [Summary("List a user's Pokémon.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
-        public async Task PokeList([Summary("Species name or catch ID of a Pokémon")] [Remainder] string name)
+        public async Task PokeList([Summary("Species name of a Pokémon")] [Remainder] string name)
         {
             TradeCordParanoiaChecks(Context);
-            name = ListNameSanitize(name);
+            var filters = name.Split('=').Length == 3 ? name.Split('=')[1].ToLower().Trim() + " " + name.Split('=')[2].ToLower().Trim() : name.Split('=').Length == 2 ? name.Split('=')[1].ToLower().Trim() : "";
+            name = filters != "" ? ListNameSanitize(name.Split('=')[0].Trim()) : ListNameSanitize(name);
+            if (name == "")
+            {
+                await Context.Message.Channel.SendMessageAsync("In order to filter a Pokémon, we need to know which Pokémon to filter.").ConfigureAwait(false);
+                return;
+            }
 
             var user = Context.User.Id.ToString();
             var list = new List<string>();
@@ -330,7 +336,19 @@ namespace SysBot.Pokemon.Discord
                 list.Add(sanitize.Remove(sanitize.IndexOf(".pk8")));
             }
 
-            var countTemp = name != "Egg" ? list.FindAll(x => x.Split(' ')[0].Contains(name) || x.Split(' ')[2].Equals(name)) : list.FindAll(x => x.Contains(name));
+            List<string> countTemp = new List<string>();
+            string[] splitter = new string[] { " - " };
+            if (filters != "" && !filters.Contains(" ") && !filters.Contains("shiny")) // Look for name and ball
+                countTemp = list.FindAll(x => x.Split(' ')[0].Contains(filters.Substring(0, 1).ToUpper() + filters.Substring(1)) && (name == "Egg" ? x.Split(splitter, StringSplitOptions.None)[1].Contains(name) : x.Split(splitter, StringSplitOptions.None)[1].Replace(" (Egg)", "").Equals(name)));
+            else if (filters != "" && !filters.Contains(" ") && filters.Contains("shiny")) // Look for name and shiny
+                countTemp = list.FindAll(x => x.Contains("★") && (name == "Egg" ? x.Split(splitter, StringSplitOptions.None)[1].Contains(name) : x.Split(splitter, StringSplitOptions.None)[1].Replace(" (Egg)", "").Equals(name)));
+            else if (filters != "" && filters.Contains(" ")) // Look for name, ball, and shiny
+            {
+                filters = filters.Replace("shiny", "").Trim();
+                countTemp = list.FindAll(x => x.Contains("★") && x.Split(' ')[0].Contains(filters.Substring(0, 1).ToUpper() + filters.Substring(1)) && (name == "Egg" ? x.Split(splitter, StringSplitOptions.None)[1].Contains(name) : x.Split(splitter, StringSplitOptions.None)[1].Replace(" (Egg)", "").Equals(name)));
+            }
+            else countTemp = list.FindAll(x => name == "Egg" ? x.Split(splitter, StringSplitOptions.None)[1].Contains(name) : (x.Split(' ')[0].Contains(name) || x.Split(splitter, StringSplitOptions.None)[1].Replace(" (Egg)", "").Equals(name)));
+
             var count = new List<string>();
             var countAll = new List<string>();
             var countSh = new List<string>();
@@ -341,7 +359,6 @@ namespace SysBot.Pokemon.Discord
                 foreach (var line in list)
                 {
                     var sort = line.Split('-').Length > 2 ? line.Split('-')[1].Trim() + "-" + line.Split('-')[2].Trim() : line.Split('-')[1].Trim();
-
                     if (line.Contains("★"))
                         countSh.Add(sort);
                 }
@@ -371,7 +388,6 @@ namespace SysBot.Pokemon.Discord
                 foreach (var line in countTemp)
                 {
                     var sort = line.Split('-', '_')[0].Trim();
-
                     if (sort.Contains("★"))
                         countSh.Add(sort);
                     count.Add(sort);
@@ -715,7 +731,7 @@ namespace SysBot.Pokemon.Discord
             var oldname = split[0].Replace("★", "").Trim().Substring(0, id.Length);
             var newIDparse = Directory.GetFiles(dir).Where(x => x.Contains(".pk8")).Select(x => x.Split('\\')[2].Split(' ', '_')[0].Replace("★", "").Trim()).ToArray();
             var newID = newIDparse.OrderBy(x => int.Parse(x)).ToArray();
-            var sanitize = split[1].Split(' ')[2].Split('.')[0].Trim();
+            var sanitize = split[1].Split(new string[] { " - " }, StringSplitOptions.None)[1].Replace(".pk8", "").Trim();
             var embed = new EmbedBuilder { Color = Color.Purple };
             var name = $"{Context.User.Username}'s Gift";
             var value = $"You gifted your {(path[0].Contains("★") ? "★**" + sanitize + "**" : sanitize)} to {Context.Message.MentionedUsers.First().Username}.";
@@ -1055,8 +1071,10 @@ namespace SysBot.Pokemon.Discord
 
         private string ListNameSanitize(string name)
         {
-            name = name.Substring(0, 1).ToUpper().Trim() + name.Substring(1).ToLower().Trim();
+            if (name == "")
+                return name;
 
+            name = name.Substring(0, 1).ToUpper().Trim() + name.Substring(1).ToLower().Trim();
             if (name.Contains("'"))
                 name = name.Replace("'", "’");
 
@@ -1141,6 +1159,7 @@ namespace SysBot.Pokemon.Discord
                 case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(poipoleRng.Length)]; break;
                 case (int)Species.Meltan: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]; break;
                 case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)])}"; break;
+                case (int)Species.Marowak: ballRng = $"\nBall: Premier"; break;
             };
 
             if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && ballRng.Contains("Cherish") && shinyRng < 96)
