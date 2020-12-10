@@ -12,15 +12,17 @@ namespace SysBot.Pokemon.Discord
         private PokeTradeTrainerInfo Info { get; }
         private int Code { get; }
         private SocketUser Trader { get; }
+        private SocketCommandContext Context { get; }
         public Action<PokeRoutineExecutor>? OnFinish { private get; set; }
         public readonly PokeTradeHub<PK8> Hub = SysCordInstance.Self.Hub;
 
-        public DiscordTradeNotifier(T data, PokeTradeTrainerInfo info, int code, SocketUser trader)
+        public DiscordTradeNotifier(T data, PokeTradeTrainerInfo info, int code, SocketUser trader, SocketCommandContext context)
         {
             Data = data;
             Info = info;
             Code = code;
             Trader = trader;
+            Context = context;
         }
 
         public void TradeInitialize(PokeRoutineExecutor routine, PokeTradeDetail<T> info)
@@ -42,7 +44,7 @@ namespace SysBot.Pokemon.Discord
             Trader.SendMessageAsync($"Trade canceled: {msg}").ConfigureAwait(false);
             if (info.Type == PokeTradeType.TradeCord)
             {
-                var user = Context.User.Id.ToString();
+                var user = Trader.Id.ToString();
                 var path = TradeExtensions.TradeCordPath.FirstOrDefault(x => x.Contains(user));
                 TradeExtensions.TradeCordPath.Remove(path);
             }
@@ -59,7 +61,7 @@ namespace SysBot.Pokemon.Discord
 
             if (info.Type == PokeTradeType.TradeCord)
             {
-                var user = Context.User.Id.ToString();
+                var user = Trader.Id.ToString();
                 var original = TradeExtensions.TradeCordPath.FirstOrDefault(x => x.Contains(user));
                 TradeExtensions.TradeCordPath.Remove(original);
                 try
@@ -102,7 +104,6 @@ namespace SysBot.Pokemon.Discord
         private void SendNotificationZ3(SeedSearchResult r)
         {
             var lines = r.ToString();
-
             var embed = new EmbedBuilder { Color = Color.LighterGrey };
             embed.AddField(x =>
             {
