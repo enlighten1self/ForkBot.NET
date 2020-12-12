@@ -446,9 +446,9 @@ namespace SysBot.Pokemon.Discord
 
         [Command("TradeCordMassRelease")]
         [Alias("mr", "massrelease")]
-        [Summary("Mass releases every non-shiny and non-Ditto Pokémon.")]
+        [Summary("Mass releases every non-shiny and non-Ditto Pokémon or specific species if specified.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTradeCord))]
-        public async Task MassRelease()
+        public async Task MassRelease([Remainder] string species = "")
         {
             TradeCordParanoiaChecks(Context);
             var user = Context.User.Id.ToString();
@@ -456,7 +456,16 @@ namespace SysBot.Pokemon.Discord
             var id1 = content[1].Split('_')[content[1].Contains("★") ? 1 : 0];
             var id2 = content[2].Split('_')[content[2].Contains("★") ? 1 : 0];
             var favorites = FavoritesCheck(content);
-            List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Split('\\')[2].Contains("★") && !x.Split('\\')[2].Contains("Ditto") &&
+            List<string> path = new List<string>();
+
+            if (species != "")
+            {
+                species = ListNameSanitize(species);
+                path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Split('\\')[2].Contains("★") && !x.Split('\\')[2].Contains("Ditto") &&
+                !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id1) && !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id2) &&
+                !x.Split('\\')[2].Split(' ')[0].Split('_')[1].Equals("Cherish") && x.Split(new string[] { " - " }, StringSplitOptions.None)[1].Split('.')[0].Replace(" (Egg)", "").Equals(species)).ToList();
+            }
+            else path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Split('\\')[2].Contains("★") && !x.Split('\\')[2].Contains("Ditto") &&
             !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id1) && !x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(id2) && !x.Split('\\')[2].Split(' ')[0].Split('_')[1].Equals("Cherish")).ToList();
 
             foreach (var fav in favorites)
@@ -467,7 +476,7 @@ namespace SysBot.Pokemon.Discord
 
             if (path.Count == 0)
             {
-                await Context.Message.Channel.SendMessageAsync("Cannot find any more non-shiny, non-Ditto, non-favorite, non-event Pokémon to release.").ConfigureAwait(false);
+                await Context.Message.Channel.SendMessageAsync(species == "" ? "Cannot find any more non-shiny, non-Ditto, non-favorite, non-event Pokémon to release." : "Cannot find specified species that could be released.").ConfigureAwait(false);
                 return;
             }
 
@@ -476,7 +485,7 @@ namespace SysBot.Pokemon.Discord
 
             var embed = new EmbedBuilder { Color = Color.DarkBlue };
             var name = $"{Context.User.Username}'s Mass Release";
-            var value = $"Every non-shiny Pokémon was released, excluding Ditto, favorites, events, and those in daycare.";
+            var value = species == "" ? "Every non-shiny Pokémon was released, excluding Ditto, favorites, events, and those in daycare." : $"Every non-shiny {species} was released, excluding favorites, events, and those in daycare.";
             await EmbedUtil(embed, name, value).ConfigureAwait(false);
         }
 
