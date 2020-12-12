@@ -178,8 +178,8 @@ namespace SysBot.Pokemon.Discord
                 var pokeImg = PokeImg(pkm, set.CanGigantamax, pkm.Species == (int)Species.Alcremie ? pkm.Data[0xE4] : (uint)0);
                 var ballImg = $"https://serebii.net/itemdex/sprites/pgl/" + $"{(Ball)pkm.Ball}ball".ToLower() + ".png";
                 var embed = new EmbedBuilder { Color = pkm.IsShiny && pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.LightOrange : Color.Teal, ImageUrl = pokeImg, ThumbnailUrl = ballImg };
-                var catchName = $"{Context.User.Username}'s Catch [#{catchID}]" + "^" + "\nResults";
-                var catchMsg = $"You threw a {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}..." + "^" + 
+                var catchName = $"{Context.User.Username}'s Catch [#{catchID}]" + "&^&" + "\nResults";
+                var catchMsg = $"You threw a {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}..." + "&^&" + 
                     $"Success! It put up a fight, but you caught {(pkm.IsShiny ? "**" + speciesName + form + $" [ID: {index}]**" : speciesName + form + $" [ID: {index}]")}!";
 
                 if (egg)
@@ -188,8 +188,8 @@ namespace SysBot.Pokemon.Discord
                     var eggForm = TradeExtensions.FormOutput(eggPkm.Species, eggPkm.AltForm, out _);
                     CatchIncrement(content, user, out _);
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
-                    catchName = catchName + "^" + "\nEggs";
-                    catchMsg = catchMsg + "^" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" + 
+                    catchName = catchName + "&^&" + "\nEggs";
+                    catchMsg = catchMsg + "&^&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" + 
                         $" from the daycare! Welcome, {(eggPkm.IsShiny ? "**" + eggSpeciesName + eggForm + $" [ID: {indexEgg}]**" : eggSpeciesName + eggForm + $" [ID: {indexEgg}]")}!";
                 }
 
@@ -204,8 +204,8 @@ namespace SysBot.Pokemon.Discord
                 string imgConk = "https://i.imgur.com/oSUQhYv.png";
                 var ball = (Ball)rng.Next(2, 26);
                 var embedFail = new EmbedBuilder { Color = Color.Teal, ImageUrl = spookyRng > 90 && imgRng == 1 ? imgGarf : spookyRng > 90 && imgRng == 2 ? imgConk : string.Empty };
-                var failName = $"{Context.User.Username}'s Catch" + "^" + "Results";
-                var failMsg = $"You threw a {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}..." + "^" +
+                var failName = $"{Context.User.Username}'s Catch" + "&^&" + "Results";
+                var failMsg = $"You threw a {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}..." + "&^&" +
                     $"{(spookyRng > 90 && imgRng != 3 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
 
                 if (egg)
@@ -214,8 +214,8 @@ namespace SysBot.Pokemon.Discord
                     var eggForm = TradeExtensions.FormOutput(eggPkm.Species, eggPkm.AltForm, out _);
                     CatchIncrement(content, user, out _);
                     TradeCordDump("TradeCord", user, eggPkm, out int indexEgg);
-                    failName = failName + "^" + "\nEggs";
-                    failMsg = failMsg + "^" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
+                    failName = failName + "&^&" + "\nEggs";
+                    failMsg = failMsg + "&^&" + $"You got " + $"{(eggPkm.IsShiny ? "a **shiny egg**" : "an egg")}" +
                         $" from the daycare! Welcome, {(eggPkm.IsShiny ? "**" + eggSpeciesName + eggForm + $" [ID: {indexEgg}]**" : eggSpeciesName + eggForm + $" [ID: {indexEgg}]")}!";
                 }
 
@@ -1297,8 +1297,8 @@ namespace SysBot.Pokemon.Discord
 
         private async Task EmbedUtil(EmbedBuilder embed, string name, string value)
         {
-            var splitName = name.Split('^');
-            var splitValue = value.Split('^');
+            var splitName = name.Split(new string[] { "&^&" }, StringSplitOptions.None);
+            var splitValue = value.Split(new string[] { "&^&" }, StringSplitOptions.None);
             for (int i = 0; i < splitName.Length; i++)
             {
                 embed.AddField(x =>
