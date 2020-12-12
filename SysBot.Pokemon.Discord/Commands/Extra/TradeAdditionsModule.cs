@@ -1109,7 +1109,7 @@ namespace SysBot.Pokemon.Discord
             var formEdgeCaseRng = rng.Next(2);
             string[] poipoleRng = { "Poke", "Beast", "Cherish" };
             var eventRng = rng.Next(101);
-            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || (speciesRng == (int)Species.Melmetal && gmaxRng > 70) || TradeExtensions.CherishOnly.Contains(speciesRng) ? "\nBall: Cherish" : "\nBall: Poke";
+            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || (speciesRng == (int)Species.Melmetal && gmaxRng > 70) || TradeExtensions.CherishOnly.Contains(speciesRng) || (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && shinyRng > 95) ? "\nBall: Cherish" : "\nBall: Poke";
 
             if (ballRng.Contains("Cherish"))
             {
@@ -1134,7 +1134,7 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Tangrowth: formHack = "\nBrave Nature"; break;
                     case (int)Species.Pichu: formHack = "\nJolly Nature"; break;
                     case (int)Species.Octillery: formHack = "\nSerious Nature"; break;
-                    case (int)Species.Melmetal: _ = gmaxRng > 70 ? formHack = "-Gmax" : formHack = ""; break;
+                    case (int)Species.Melmetal: formHack = "-Gmax"; break;
                     case (int)Species.Feebas: formHack = "\nCalm Nature"; break;
                     case (int)Species.Whiscash: formHack = "\nGentle Nature"; break;
                     default: formHack = ""; break;
@@ -1164,16 +1164,11 @@ namespace SysBot.Pokemon.Discord
 
             switch (speciesRng)
             {
-                case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = "\nBall: " + poipoleRng[rng.Next(poipoleRng.Length)]; break;
-                case (int)Species.Meltan: ballRng = "\nBall: " + TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]; break;
-                case (int)Species.Melmetal: ballRng = $"\nBall: {(gmaxRng > 70 && eventRng > 95 ? "Cherish" : TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)])}"; break;
+                case (int)Species.Poipole: case (int)Species.Naganadel: ballRng = $"\nBall: {poipoleRng[rng.Next(poipoleRng.Length)]}"; break;
+                case (int)Species.Meltan: ballRng = $"\nBall: {TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]}"; break;
+                case (int)Species.Melmetal: ballRng = gmaxRng > 70 ? ballRng : $"\nBall: {TradeExtensions.LGPEBalls[rng.Next(TradeExtensions.LGPEBalls.Length)]}"; break;
                 case (int)Species.Marowak: ballRng = $"\nBall: Premier"; break;
             };
-
-            if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && ballRng.Contains("Cherish") && shinyRng < 96)
-                ballRng = "\nBall: Poke";
-            else if (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && !ballRng.Contains("Cherish") && shinyRng > 95)
-                ballRng = "\nBall: Cherish";
 
             return new Tuple<string, string>(formHack, ballRng);
         }
