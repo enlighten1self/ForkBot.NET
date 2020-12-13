@@ -50,8 +50,8 @@ namespace SysBot.Pokemon
                 EncounterMode.HorizontalLine => WalkInLine(token),
                 EncounterMode.Eternatus => DoEternatusEncounter(token),
                 EncounterMode.LegendaryDogs => DoDogEncounter(token),
-                EncounterMode.Regi => DoRegiEncounter(token),
-                EncounterMode.Regigigas => DoRegiEncounter(token),
+                EncounterMode.SoftReset => DoSoftResetEncounter(token),
+                EncounterMode.Regigigas => DoSoftResetEncounter(token),
                 EncounterMode.SoJCamp => DoSoJCampEncounter(token),
                 _ => WalkInLine(token),
             };
@@ -211,7 +211,7 @@ namespace SysBot.Pokemon
         private async Task<bool> HandleEncounter(PK8 pk, bool legends, CancellationToken token)
         {
             encounterCount++;
-            Log($"Encounter: {encounterCount}{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}");
+            Log($"Encounter: {encounterCount}{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? "Mark: " + mark + Environment.NewLine : "")}");
             TradeExtensions.EncounterLogs(pk);
             if (legends)
                 Counts.AddCompletedLegends();
@@ -285,9 +285,7 @@ namespace SysBot.Pokemon
             await Click(X, 1_000, token).ConfigureAwait(false);
             await Click(A, 1_000, token).ConfigureAwait(false); // Attempt again to be sure
             while (!await IsOnOverworld(Hub.Config, token).ConfigureAwait(false) && check.Species != 0)
-            {
                 await Click(B, 0_400, token).ConfigureAwait(false);
-            }
 
             if (await IsOnOverworld(Hub.Config, token).ConfigureAwait(false) && !await IsInBattle(token).ConfigureAwait(false))
             {
@@ -313,14 +311,14 @@ namespace SysBot.Pokemon
             }
         }
 
-        private async Task DoRegiEncounter(CancellationToken token)
+        private async Task DoSoftResetEncounter(CancellationToken token)
         {
             while (!token.IsCancellationRequested && Config.NextRoutineType == PokeRoutineType.EncounterBot)
             {
                 while (!await IsInBattle(token).ConfigureAwait(false))
-                    await Click(A, 2_000, token).ConfigureAwait(false);
+                    await Click(A, 0_500, token).ConfigureAwait(false);
 
-                var pk = await ReadUntilPresent(Hub.Config.Encounter.EncounteringType == EncounterMode.Regi ? WildPokemonOffset : RaidPokemonOffset, 2_000, 0_200, token).ConfigureAwait(false);
+                var pk = await ReadUntilPresent(Hub.Config.Encounter.EncounteringType == EncounterMode.SoftReset ? WildPokemonOffset : RaidPokemonOffset, 2_000, 0_200, token).ConfigureAwait(false);
                 if (pk == null)
                 {
                     Log("Invalid data detected. Restarting loop.");
@@ -334,18 +332,8 @@ namespace SysBot.Pokemon
 
                 Log($"Resetting {SpeciesName.GetSpeciesNameGeneration(pk.Species, 2, 8)} by restarting the game");
                 await CloseGame(Hub.Config, token).ConfigureAwait(false);
-
-                await Click(A, 1_000 + Hub.Config.Timings.ExtraTimeLoadProfile, token).ConfigureAwait(false);
-                await Click(A, 1_000 + Hub.Config.Timings.ExtraTimeCheckDLC, token).ConfigureAwait(false);
-                await Click(DUP, 0_600, token).ConfigureAwait(false);
-                await Click(A, 0_600, token).ConfigureAwait(false);
-
                 Log("Restarting the game and mashing A until in battle!");
-
-                await Task.Delay(11_000 + Hub.Config.Timings.ExtraTimeLoadGame, token).ConfigureAwait(false);
-
-                for (int i = 0; i < 5; i++)
-                    await Click(A, 1_000, token).ConfigureAwait(false);
+                await StartGame(Hub.Config, token, true).ConfigureAwait(false);
             }
         }
 
@@ -362,6 +350,7 @@ namespace SysBot.Pokemon
                     campEntered = true;
                 }
 
+                Log("Entering camp...");
                 await Click(A, 12_000, token).ConfigureAwait(false);
                 await Click(B, 2_000, token).ConfigureAwait(false);
                 await Click(A, 0_500, token).ConfigureAwait(false);
@@ -381,6 +370,7 @@ namespace SysBot.Pokemon
                         return;
                 }
 
+                Log("Fleeing from battle...");
                 while (await IsInBattle(token).ConfigureAwait(false))
                     await FleeToOverworld(token).ConfigureAwait(false);
 

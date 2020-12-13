@@ -51,7 +51,7 @@ namespace SysBot.Pokemon
             if (settings.TargetNature != Nature.Random && settings.TargetNature != (Nature)pk.Nature)
                 return false;
 
-            if (settings.MarkOnly && !HasMark(pk))
+            if (settings.MarkOnly && !HasMark(pk, out _))
                 return false;
 
             if (settings.ShinyTarget != TargetShinyType.DisableOption)
@@ -107,12 +107,16 @@ namespace SysBot.Pokemon
             return targetIVs;
         }
 
-        private static bool HasMark(IRibbonIndex pk)
+        public static bool HasMark(IRibbonIndex pk, out RibbonIndex result)
         {
+            result = default;
             for (var mark = RibbonIndex.MarkLunchtime; mark <= RibbonIndex.MarkSlump; mark++)
             {
                 if (pk.GetRibbon((int)mark))
+                {
+                    result = mark;
                     return true;
+                }
             }
             return false;
         }

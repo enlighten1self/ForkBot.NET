@@ -319,7 +319,7 @@ namespace SysBot.Pokemon
             Log("Closed out of the game!");
         }
 
-        public async Task StartGame(PokeTradeHubConfig config, CancellationToken token)
+        public async Task StartGame(PokeTradeHubConfig config, CancellationToken token, bool softReset = false)
         {
             // Open game.
             await Click(A, 1_000 + config.Timings.ExtraTimeLoadProfile, token).ConfigureAwait(false);
@@ -346,10 +346,11 @@ namespace SysBot.Pokemon
             for (int i = 0; i < 5; i++)
                 await Click(A, 1_000, token).ConfigureAwait(false);
 
-            while (!await IsOnOverworld(config, token).ConfigureAwait(false))
+            while (!await IsOnOverworld(config, token).ConfigureAwait(false) && !softReset)
                 await Task.Delay(2_000, token).ConfigureAwait(false);
 
-            Log("Back in the overworld!");
+            if (!softReset)
+                Log("Back in the overworld!");
         }
 
         public async Task<bool> CheckIfSearchingForLinkTradePartner(CancellationToken token)

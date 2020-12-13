@@ -25,7 +25,7 @@
         /// <summary>
         /// Bot will soft reset Regis
         /// </summary>
-        Regi,
+        SoftReset,
 
         /// <summary>
         /// Bot will soft reset Regigigas
