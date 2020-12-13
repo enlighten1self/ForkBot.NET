@@ -211,7 +211,7 @@ namespace SysBot.Pokemon
         private async Task<bool> HandleEncounter(PK8 pk, bool legends, CancellationToken token)
         {
             encounterCount++;
-            Log($"Encounter: {encounterCount}{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? "Mark: " + mark + Environment.NewLine : "")}");
+            Log($"Encounter: {encounterCount}{Environment.NewLine}{ShowdownSet.GetShowdownText(pk)}{Environment.NewLine}{(StopConditionSettings.HasMark(pk, out RibbonIndex mark) ? $"Mark: {mark.ToString().Replace("Mark", "")}{Environment.NewLine}" : "")}");
             TradeExtensions.EncounterLogs(pk);
             if (legends)
                 Counts.AddCompletedLegends();
