@@ -15,7 +15,6 @@ namespace SysBot.Pokemon
         private readonly IDumper DumpSetting;
         private readonly int[] DesiredIVs;
         private readonly byte[] BattleMenuReady = { 0, 0, 0, 255 };
-        private readonly string Ping;
 
         public EncounterBot(PokeBotConfig cfg, PokeTradeHub<PK8> hub) : base(cfg)
         {
@@ -23,7 +22,6 @@ namespace SysBot.Pokemon
             Counts = Hub.Counts;
             DumpSetting = Hub.Config.Folder;
             DesiredIVs = StopConditionSettings.InitializeTargetIVs(Hub);
-            Ping = !Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}>\n" : "";
         }
 
         private int encounterCount;
@@ -224,7 +222,7 @@ namespace SysBot.Pokemon
             if (StopConditionSettings.EncounterFound(pk, DesiredIVs, Hub.Config.StopConditions))
             {
                 Log(Hub.Config.StopConditions.CatchEncounter && (Hub.Config.Encounter.EncounteringType == EncounterMode.VerticalLine || Hub.Config.Encounter.EncounteringType == EncounterMode.HorizontalLine) ?
-                    "Result found! Attempting to catch..." : $"{Ping}Result found! Stopping routine execution; restart the bot(s) to search again.");
+                    "Result found! Attempting to catch..." : $"{(!Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}>\n" : "")}Result found! Stopping routine execution; restart the bot(s) to search again.");
                 if (Hub.Config.StopConditions.CaptureVideoClip)
                 {
                     await Task.Delay(Hub.Config.StopConditions.ExtraTimeWaitCaptureVideo, token).ConfigureAwait(false);
@@ -265,11 +263,11 @@ namespace SysBot.Pokemon
                 {
                     Log("Restoring original pouch data.");
                     await Connection.WriteBytesAsync(pouchData, PokeBallOffset, Config.ConnectionType, token).ConfigureAwait(false);
-                    await Task.Delay(500, token).ConfigureAwait(false);
+                    await Task.Delay(0_500, token).ConfigureAwait(false);
                 }
                 else
                 {
-                    Log($"{Ping}Result found! Stopping routine execution; restart the bot(s) to search again.");
+                    Log($"{(!Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}>\n" : "")}Result found! Stopping routine execution; restart the bot(s) to search again.");
                     return;
                 }
             }
@@ -289,7 +287,7 @@ namespace SysBot.Pokemon
 
             if (await IsOnOverworld(Hub.Config, token).ConfigureAwait(false) && !await IsInBattle(token).ConfigureAwait(false))
             {
-                Log($"{Ping}Caught {SpeciesName.GetSpeciesName(pk.Species, 2)}! Resuming routine...");
+                Log($"{(!Hub.Config.StopConditions.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.StopConditions.PingOnMatch}>\n" : "")}Caught {SpeciesName.GetSpeciesName(pk.Species, 2)}! Resuming routine...");
                 await WalkInLine(token).ConfigureAwait(false);
             }
         }

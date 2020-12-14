@@ -84,7 +84,7 @@ namespace SysBot.Pokemon
                                         (int)Species.Rockruff, (int)Species.Lycanroc, (int)Species.Salazzle, (int)Species.Bewear, (int)Species.Steenee, (int)Species.Comfey, (int)Species.Turtonator,
                                         (int)Species.Mimikyu, (int)Species.Magearna, (int)Species.Marshadow, (int)Species.Zeraora, (int)Species.Milcery, (int)Species.Zarude, (int)Species.Goomy,
                                         (int)Species.Toxapex, (int)Species.Oranguru, (int)Species.Passimian, (int)Species.Drampa, (int)Species.Naganadel, (int)Species.Tangrowth, (int)Species.Feebas,
-                                        (int)Species.Whiscash, (int)Species.Krabby };
+                                        (int)Species.Whiscash };
 
         public static int[] CanBeShinyCherish = { (int)Species.Charizard, (int)Species.Pikachu, (int)Species.Machamp, (int)Species.Gengar, (int)Species.Magikarp, (int)Species.Gyarados, (int)Species.Eevee,
                                                   (int)Species.Mewtwo, (int)Species.Tyranitar, (int)Species.HoOh, (int)Species.Celebi, (int)Species.Gardevoir, (int)Species.Milotic,
@@ -94,7 +94,7 @@ namespace SysBot.Pokemon
 
         public static int[] CherishShinyOnly = { (int)Species.Silvally, (int)Species.Golurk, (int)Species.Beldum, (int)Species.Necrozma, (int)Species.Poipole, (int)Species.Naganadel,
                                                  (int)Species.TapuKoko, (int)Species.TapuLele, (int)Species.TapuFini, (int)Species.TapuBulu, (int)Species.Larvitar, (int)Species.Solgaleo,
-                                                 (int)Species.Lunala, (int)Species.Amoonguss, (int)Species.Larvitar, (int)Species.Krabby, (int)Species.Pichu };
+                                                 (int)Species.Lunala, (int)Species.Amoonguss, (int)Species.Larvitar, (int)Species.Krabby, (int)Species.Pichu, (int)Species.Krabby };
 
         public static int[] ShinyLock = { (int)Species.Victini, (int)Species.Keldeo, (int)Species.Volcanion, (int)Species.Cosmog, (int)Species.Cosmoem, (int)Species.Magearna,
                                           (int)Species.Marshadow, (int)Species.Zacian, (int)Species.Zamazenta, (int)Species.Eternatus, (int)Species.Kubfu, (int)Species.Urshifu,
@@ -212,17 +212,17 @@ namespace SysBot.Pokemon
                 BallApplicator.ApplyBallLegalRandom(pkm);
         }
 
-        public static PKM EggRngRoutine(List<string> content, List<string> trainerInfo, int form1, int form2, int species1, int species2)
+        public static PKM EggRngRoutine(List<string> content, List<string> trainerInfo, int form1, int form2, int evo1, int evo2)
         {
             var rng = new Random();
             var ballRng = $"\nBall: {(Ball)rng.Next(2, 26)}";
             var ball1 = int.Parse(content[1].Split('_')[content[1].Contains("★") ? 3 : 2].Trim());
             var ball2 = int.Parse(content[2].Split('_')[content[2].Contains("★") ? 3 : 2].Trim());
-            bool specificEgg = (species1 == species2 && ValidEgg.Contains(species1)) || ((species1 == 132 || species2 == 132) && (ValidEgg.Contains(species1) || ValidEgg.Contains(species2))) || ((species1 == 29 || species1 == 32) && (species2 == 29 || species2 == 32));
+            bool specificEgg = (evo1 == evo2 && ValidEgg.Contains(evo1)) || ((evo1 == 132 || evo2 == 132) && (ValidEgg.Contains(evo1) || ValidEgg.Contains(evo2))) || ((evo1 == 29 || evo1 == 32) && (evo2 == 29 || evo2 == 32));
             var shinyRng = content[1].Contains("★") && content[2].Contains("★") ? rng.Next(101) + 10 : rng.Next(101);
             var ballRngDC = rng.Next(1, 3);
-            var dittoLoc = DittoSlot(species1, species2);
-            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(dittoLoc == 1 ? species2 : species1, 2, 8) : SpeciesName.GetSpeciesNameGeneration(ValidEgg[rng.Next(ValidEgg.Length)], 2, 8);
+            var dittoLoc = DittoSlot(evo1, evo2);
+            var speciesRng = specificEgg ? SpeciesName.GetSpeciesNameGeneration(dittoLoc == 1 ? evo2 : evo1, 2, 8) : SpeciesName.GetSpeciesNameGeneration(ValidEgg[rng.Next(ValidEgg.Length)], 2, 8);
             var speciesRngID = SpeciesName.GetSpeciesID(speciesRng);
             FormOutput(speciesRngID, 0, out string[] forms);
 
@@ -232,9 +232,9 @@ namespace SysBot.Pokemon
             string formHelper = speciesRng switch
             {
                 "Indeedee" => _ = specificEgg && dittoLoc == 1 ? FormOutput(876, form2, out _) : specificEgg && dittoLoc == 2 ? FormOutput(876, form1, out _) : FormOutput(876, rng.Next(2), out _),
-                "Nidoran" => _ = specificEgg && dittoLoc == 1 ? (species2 == 32 ? "-M" : "-F") : specificEgg && dittoLoc == 2 ? (species1 == 32 ? "-M" : "-F") : (rng.Next(2) == 0 ? "-M" : "-F"),
+                "Nidoran" => _ = specificEgg && dittoLoc == 1 ? (evo2 == 32 ? "-M" : "-F") : specificEgg && dittoLoc == 2 ? (evo1 == 32 ? "-M" : "-F") : (rng.Next(2) == 0 ? "-M" : "-F"),
                 "Sinistea" => "",
-                _ => FormOutput(SpeciesName.GetSpeciesID(speciesRng), specificEgg && form1.Equals(form2) ? form1 : specificEgg && dittoLoc == 1 ? form2 : specificEgg && dittoLoc == 2 ? form1 : rng.Next(forms.Length), out _),
+                _ => FormOutput(speciesRngID, specificEgg && form1.Equals(form2) ? form1 : specificEgg && dittoLoc == 1 ? form2 : specificEgg && dittoLoc == 2 ? form1 : rng.Next(forms.Length), out _),
             };
 
             var set = new ShowdownSet($"Egg({speciesRng}{formHelper}){(ballRng.Contains("Cherish") || Pokeball.Contains(SpeciesName.GetSpeciesID(speciesRng)) ? "\nBall: Poke" : ballRng)}\n{string.Join("\n", trainerInfo)}");
@@ -373,6 +373,7 @@ namespace SysBot.Pokemon
         {
             var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
             formString = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
+            _ = formString.Length == 1 && form > 0 ? form = 0 : form;
 
             if (formString[form] == "Normal" || formString[form].Contains("-") && species != (int)Species.Zygarde || formString[form] == "")
                 formString[form] = "";

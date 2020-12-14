@@ -100,8 +100,8 @@ namespace SysBot.Pokemon.Discord
             var catchRng = rng.Next(101);
             var eggRng = rng.Next(101);
             PKM eggPkm = new PK8();
-            int form1 = 0, form2 = 0, id1 = 0, id2 = 0;
-            bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out id1, out id2) && eggRng > 25;
+            int form1 = 0, form2 = 0, evo1 = 0, evo2 = 0;
+            bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out evo1, out evo2) && eggRng > 25;
             List<string> trainerInfo = new List<string>();
 
             for (int i = 3; i < 8; i++)
@@ -112,7 +112,7 @@ namespace SysBot.Pokemon.Discord
 
             if (egg)
             {
-                eggPkm = TradeExtensions.EggRngRoutine(content, trainerInfo, form1, form2, id1, id2);
+                eggPkm = TradeExtensions.EggRngRoutine(content, trainerInfo, form1, form2, evo1, evo2);
                 var laEgg = new LegalityAnalysis(eggPkm);
                 var invalidEgg = !(eggPkm is PK8) || (!laEgg.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality);
                 if (invalidEgg)
@@ -553,21 +553,23 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            bool canGenerateEgg = CanGenerateEgg(content, out string[] split1, out string[] split2, out int form1, out int form2, out int speciesID1, out int speciesID2);
+            bool canGenerateEgg = CanGenerateEgg(content, out string[] split1, out string[] split2, out int form1, out int form2, out _, out _);
             var shiny1 = split1.Contains("★");
             var shiny2 = split2.Contains("★");
+            var species1 = int.Parse(split1[shiny1 ? 2 : 1].Split('-')[0]);
+            var species2 = int.Parse(split2[shiny2 ? 2 : 1].Split('-')[0]);
             string dcSpecies1 = "";
             string dcSpecies2 = "";
             string msg = "";
 
             if (content[1] != "0-0")
-                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0].Split('-')[0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID1, 2, 8)}{TradeExtensions.FormOutput(speciesID1, form1, out _)} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
+                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(species1, 2, 8)}{TradeExtensions.FormOutput(species1, form1, out _)} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
 
             if (content[2] != "0-0")
-                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0].Split('-')[0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(speciesID2, 2, 8)}{TradeExtensions.FormOutput(speciesID2, form2, out _)} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
+                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(species2, 2, 8)}{TradeExtensions.FormOutput(species2, form2, out _)} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
 
             if (content[1] != "0-0" && content[2] != "0-0")
-                msg = $"{dcSpecies1}\n{dcSpecies2}{(canGenerateEgg ? "\n\nThey seem to really like each other." : "\n\nThey don't really seem to be fond of each other. Make sure they're base evolution and can be eggs!")}";
+                msg = $"{dcSpecies1}\n{dcSpecies2}{(canGenerateEgg ? "\n\nThey seem to really like each other." : "\n\nThey don't really seem to be fond of each other. Make sure they're of the same evolution tree and can be eggs!")}";
             else if (content[1] == "0-0" && content[2] != "0-0")
                 msg = $"{dcSpecies2}\n\nIt seems lonely.";
             else if (content[2] == "0-0" && content[1] != "0-0")
@@ -1035,32 +1037,36 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private bool CanGenerateEgg(List<string> content, out string[] split1, out string[] split2, out int form1, out int form2, out int speciesID1, out int speciesID2)
+        private bool CanGenerateEgg(List<string> content, out string[] split1, out string[] split2, out int form1, out int form2, out int evo1, out int evo2)
         {
             split1 = content[1].Split('_');
             split2 = content[2].Split('_');
             form1 = form2 = 0;
-            speciesID1 = speciesID2 = 0;
+            evo1 = evo2 = 0;
 
             if (content[1] != "0-0")
             {
                 form1 = int.Parse(content[1].Split('-')[1].Split('_')[0]);
-                speciesID1 = int.Parse(content[1].Split('-')[0].Split('_').LastOrDefault());
+                int speciesID1 = int.Parse(content[1].Split('-')[0].Split('_').LastOrDefault());
+                evo1 = EvolutionTree.GetEvolutionTree(8).GetPreEvolutions(speciesID1, 0).FirstOrDefault();
+                _ = evo1 == 0 ? evo1 = speciesID1 : evo1;
             }
 
             if (content[2] != "0-0")
             {
                 form2 = int.Parse(content[2].Split('-')[1].Split('_')[0]);
-                speciesID2 = int.Parse(content[2].Split('-')[0].Split('_').LastOrDefault());
+                int speciesID2 = int.Parse(content[2].Split('-')[0].Split('_').LastOrDefault());
+                evo2 = EvolutionTree.GetEvolutionTree(8).GetPreEvolutions(speciesID2, 0).FirstOrDefault();
+                _ = evo2 == 0 ? evo2 = speciesID2 : evo2;
             }
 
-            if (speciesID1 == 132 && speciesID2 == 132)
+            if (evo1 == 132 && evo2 == 132)
                 return true;
-            else if (speciesID1 == speciesID2 && TradeExtensions.ValidEgg.Contains(speciesID1))
+            else if (evo1 == evo2 && TradeExtensions.ValidEgg.Contains(evo1))
                 return true;
-            else if ((speciesID1 == 132 || speciesID2 == 132) && (TradeExtensions.ValidEgg.Contains(speciesID1) || TradeExtensions.ValidEgg.Contains(speciesID2)))
+            else if ((evo1 == 132 || evo2 == 132) && (TradeExtensions.ValidEgg.Contains(evo1) || TradeExtensions.ValidEgg.Contains(evo2)))
                 return true;
-            else if ((speciesID1 == 29 || speciesID2 == 32) && (speciesID1 == 29 || speciesID2 == 32))
+            else if ((evo1 == 29 && evo2 == 32) || (evo1 == 32 && evo2 == 29))
                 return true;
             else return false;
         }
