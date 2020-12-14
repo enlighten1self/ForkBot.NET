@@ -179,7 +179,7 @@ namespace SysBot.Pokemon.Discord
                 var ballImg = $"https://serebii.net/itemdex/sprites/pgl/" + $"{(Ball)pkm.Ball}ball".ToLower() + ".png";
                 var embed = new EmbedBuilder { Color = pkm.IsShiny && pkm.ShinyXor == 0 ? Color.Gold : pkm.IsShiny ? Color.LightOrange : Color.Teal, ImageUrl = pokeImg, ThumbnailUrl = ballImg };
                 var catchName = $"{Context.User.Username}'s Catch [#{catchID}]" + "&^&" + "\nResults";
-                var catchMsg = $"You threw a {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}..." + "&^&" + 
+                var catchMsg = $"You threw {(pkm.Ball == 2 ? "an" : "a")} {(Ball)pkm.Ball} Ball at a {(pkm.IsShiny ? "**shiny** wild **" + speciesName + form + "**" : "wild " + speciesName + form)}..." + "&^&" + 
                     $"Success! It put up a fight, but you caught {(pkm.IsShiny ? "**" + speciesName + form + $" [ID: {index}]**" : speciesName + form + $" [ID: {index}]")}!";
 
                 if (egg)
@@ -205,7 +205,7 @@ namespace SysBot.Pokemon.Discord
                 var ball = (Ball)rng.Next(2, 26);
                 var embedFail = new EmbedBuilder { Color = Color.Teal, ImageUrl = spookyRng > 90 && imgRng == 1 ? imgGarf : spookyRng > 90 && imgRng == 2 ? imgConk : string.Empty };
                 var failName = $"{Context.User.Username}'s Catch" + "&^&" + "Results";
-                var failMsg = $"You threw a {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}..." + "&^&" +
+                var failMsg = $"You threw {(ball == Ball.Ultra ? "an" : "a")} {(ball == Ball.Cherish ? Ball.Poke : ball)} Ball at a wild {(spookyRng > 90 && imgRng != 3 ? "...whatever that thing is" : SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8))}..." + "&^&" +
                     $"{(spookyRng > 90 && imgRng != 3 ? "One wiggle... Two... It breaks free and stares at you, smiling. You run for dear life." : "...but it managed to escape!")}";
 
                 if (egg)
