@@ -556,17 +556,17 @@ namespace SysBot.Pokemon.Discord
             bool canGenerateEgg = CanGenerateEgg(content, out string[] split1, out string[] split2, out int form1, out int form2, out _, out _);
             var shiny1 = split1.Contains("★");
             var shiny2 = split2.Contains("★");
-            var species1 = int.Parse(split1[shiny1 ? 2 : 1].Split('-')[0]);
-            var species2 = int.Parse(split2[shiny2 ? 2 : 1].Split('-')[0]);
+            var species1 = content[1] != "0-0" ? split1[shiny1 ? 2 : 1].Split('-')[0] : "";
+            var species2 = content[2] != "0-0" ? split2[shiny2 ? 2 : 1].Split('-')[0] : "";
             string dcSpecies1 = "";
             string dcSpecies2 = "";
             string msg = "";
 
             if (content[1] != "0-0")
-                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(species1, 2, 8)}{TradeExtensions.FormOutput(species1, form1, out _)} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
+                dcSpecies1 = $"[ID: {split1[shiny1 ? 1 : 0]}] {(shiny1 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(int.Parse(species1), 2, 8)}{TradeExtensions.FormOutput(int.Parse(species1), form1, out _)} ({(Ball)int.Parse(split1[shiny1 ? 3 : 2])})";
 
             if (content[2] != "0-0")
-                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(species2, 2, 8)}{TradeExtensions.FormOutput(species2, form2, out _)} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
+                dcSpecies2 = $"[ID: {split2[shiny2 ? 1 : 0]}] {(shiny2 ? "★" : "")}{SpeciesName.GetSpeciesNameGeneration(int.Parse(species2), 2, 8)}{TradeExtensions.FormOutput(int.Parse(species2), form2, out _)} ({(Ball)int.Parse(split2[shiny2 ? 3 : 2])})";
 
             if (content[1] != "0-0" && content[2] != "0-0")
                 msg = $"{dcSpecies1}\n{dcSpecies2}{(canGenerateEgg ? "\n\nThey seem to really like each other." : "\n\nThey don't really seem to be fond of each other. Make sure they're of the same evolution tree and can be eggs!")}";
@@ -641,9 +641,9 @@ namespace SysBot.Pokemon.Discord
                 }
                 else File.WriteAllText($"TradeCord\\{user}.txt", string.Join(",", content));
 
-                var species1 = SpeciesName.GetSpeciesNameGeneration(int.Parse(species[0].Split('-')[0].Trim()), 2, 8);
+                var species1 = (shiny1 ? "★" : "") + SpeciesName.GetSpeciesNameGeneration(int.Parse(species[0].Split('-')[0].Trim()), 2, 8);
                 var form1 = TradeExtensions.FormOutput(int.Parse(species[0].Split('-')[0].Trim()), int.Parse(species[0].Split('-')[1].Trim()), out _);
-                var species2 = species.Count > 1 ? SpeciesName.GetSpeciesNameGeneration(int.Parse(species[1].Split('-')[0].Trim()), 2, 8) : "";
+                var species2 = species.Count > 1 ? (shiny2 ? "★" : "") + SpeciesName.GetSpeciesNameGeneration(int.Parse(species[1].Split('-')[0].Trim()), 2, 8) : "";
                 var form2 = species.Count > 1 ? TradeExtensions.FormOutput(int.Parse(species[1].Split('-')[0].Trim()), int.Parse(species[1].Split('-')[1].Trim()), out _) : "";
                 var embedWithdraw = new EmbedBuilder { Color = Color.DarkBlue };
                 var nameWithdraw = $"{Context.User.Username}'s Daycare Withdraw";
