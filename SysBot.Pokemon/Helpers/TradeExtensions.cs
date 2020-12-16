@@ -373,7 +373,7 @@ namespace SysBot.Pokemon
         {
             var strings = GameInfo.GetStrings(LanguageID.English.GetLanguage2CharName());
             formString = FormConverter.GetFormList(species, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, 8);
-            _ = formString.Length == 1 && form > 0 ? form = 0 : form;
+            _ = formString.Length == form && form != 0 ? form -= 1 : form;
 
             if (formString[form] == "Normal" || formString[form].Contains("-") && species != (int)Species.Zygarde || formString[form] == "")
                 formString[form] = "";
