@@ -1048,16 +1048,16 @@ namespace SysBot.Pokemon.Discord
             {
                 form1 = int.Parse(content[1].Split('-')[1].Split('_')[0]);
                 int speciesID1 = int.Parse(content[1].Split('-')[0].Split('_').LastOrDefault());
-                evo1 = EvolutionTree.GetEvolutionTree(8).GetPreEvolutions(speciesID1, 0).FirstOrDefault();
-                _ = evo1 == 0 ? evo1 = speciesID1 : evo1;
+                var pkm1 = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(SpeciesName.GetSpeciesNameGeneration(speciesID1, 2, 8))), out _);
+                evo1 = EvolutionTree.GetEvolutionTree(8).GetValidPreEvolutions(pkm1, 100).LastOrDefault().Species;
             }
 
             if (content[2] != "0-0")
             {
                 form2 = int.Parse(content[2].Split('-')[1].Split('_')[0]);
                 int speciesID2 = int.Parse(content[2].Split('-')[0].Split('_').LastOrDefault());
-                evo2 = EvolutionTree.GetEvolutionTree(8).GetPreEvolutions(speciesID2, 0).FirstOrDefault();
-                _ = evo2 == 0 ? evo2 = speciesID2 : evo2;
+                var pkm2 = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(SpeciesName.GetSpeciesNameGeneration(speciesID2, 2, 8))), out _);
+                evo2 = EvolutionTree.GetEvolutionTree(8).GetValidPreEvolutions(pkm2, 100).LastOrDefault().Species;
             }
 
             if (evo1 == 132 && evo2 == 132)
