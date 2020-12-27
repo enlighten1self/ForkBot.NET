@@ -102,7 +102,7 @@ namespace SysBot.Pokemon.Discord
             PKM eggPkm = new PK8();
             int form1 = 0, form2 = 0, evo1 = 0, evo2 = 0;
             bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out evo1, out evo2) && eggRng > 25;
-            List<string> trainerInfo = new List<string>();
+            List<string> trainerInfo = new();
 
             for (int i = 3; i < 8; i++)
             {
@@ -336,7 +336,7 @@ namespace SysBot.Pokemon.Discord
                 list.Add(sanitize.Remove(sanitize.IndexOf(".pk8")));
             }
 
-            List<string> countTemp = new List<string>();
+            List<string> countTemp = new();
             string[] splitter = new string[] { " - " };
             if (filters != "" && !filters.Contains(" ") && !filters.Contains("shiny")) // Look for name and ball
                 countTemp = list.FindAll(x => x.Split(' ')[0].Contains(filters.Substring(0, 1).ToUpper() + filters.Substring(1)) && (name == "Egg" ? x.Split(splitter, StringSplitOptions.None)[1].Contains(name) : x.Split(splitter, StringSplitOptions.None)[1].Replace(" (Egg)", "").Equals(name)));
@@ -456,7 +456,7 @@ namespace SysBot.Pokemon.Discord
             var id1 = content[1].Split('_')[content[1].Contains("★") ? 1 : 0];
             var id2 = content[2].Split('_')[content[2].Contains("★") ? 1 : 0];
             var favorites = FavoritesCheck(content);
-            List<string> path = new List<string>();
+            List<string> path = new();
 
             if (species != "")
             {
@@ -609,7 +609,7 @@ namespace SysBot.Pokemon.Discord
                 bool shiny2 = content[2].Contains("★");
                 var id1 = content[1] != "0-0" ? content[1].Split('_')[shiny1 ? 1 : 0].Split('-')[0].Trim() : "";
                 var id2 = content[2] != "0-0" ? content[2].Split('_')[shiny2 ? 1 : 0].Split('-')[0].Trim() : "";
-                List<string> species = new List<string>();
+                List<string> species = new();
                 if (id != "All")
                 {
                     if (id1.Equals(id))
@@ -853,7 +853,7 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            List<string> names = new List<string>();
+            List<string> names = new();
             foreach (var fav in favorites)
             {
                 List<string> path = Directory.GetFiles(Path.Combine("TradeCord", user)).Where(x => !x.Contains("★") ? x.Split('\\')[2].Split('_')[0].Trim().Equals(fav) : x.Split('\\')[2].Split('_')[0].Replace("★", "").Trim().Equals(fav.Replace("★", "").Trim())).ToList();
@@ -1073,7 +1073,7 @@ namespace SysBot.Pokemon.Discord
 
         private List<string> FavoritesCheck(List<string> content)
         {
-            List<string> favorites = new List<string>();
+            List<string> favorites = new();
             if (content.Count > 8)
             {
                 for (int i = 8; i < content.Count; i++)
@@ -1182,7 +1182,7 @@ namespace SysBot.Pokemon.Discord
         private async Task ListUtil(string nameMsg, string entry)
         {
             var index = 0;
-            List<string> pageContent = new List<string>();
+            List<string> pageContent = new();
             var emptyList = "No results found.";
             bool canReact = Context.Guild.CurrentUser.GetPermissions(Context.Channel as IGuildChannel).AddReactions;
             var round = Math.Round((decimal)entry.Length / 1024, MidpointRounding.AwayFromZero);

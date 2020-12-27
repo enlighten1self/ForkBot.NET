@@ -106,7 +106,7 @@ namespace SysBot.Pokemon.Discord
             foreach (var ip in ips)
             {
                 var bot = SysCordInstance.Runner.GetBot(ip);
-                if (bot?.Bot.Config.ConnectionType == PokeConnectionType.USB)
+                if (bot?.Bot.Config.ConnectionType == ConnectionType.USB)
                 {
                     await ReplyAsync($"This bot could not be restarted because it's running in USB mode.").ConfigureAwait(false);
                     return;

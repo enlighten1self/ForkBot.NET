@@ -12,8 +12,8 @@ namespace SysBot.Pokemon
         public PokeTradeHub<PK8> Hub;
         public static int XCoordStart = 0;
         public static int YCoordStart = 0;
-        public static List<string> TradeCordPath = new List<string>();
-        public static List<string> TradeCordCooldown = new List<string>();
+        public static List<string> TradeCordPath = new();
+        public static List<string> TradeCordCooldown = new();
         public static PKM TradeCordPKM = AutoLegalityWrapper.GetTrainerInfo(8).GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet("Zigzagoon")), out _);
         public static byte[] Data = TradeCordPKM.Data;
 
@@ -302,16 +302,16 @@ namespace SysBot.Pokemon
 
         public static void EggTrade(PK8 pkm)
         {
-            switch (pkm.Language)
+            pkm.Nickname = pkm.Language switch
             {
-                case 1: pkm.Nickname = "タマゴ"; break;
-                case 3: pkm.Nickname = "Œuf"; break;
-                case 4: pkm.Nickname = "Uovo"; break;
-                case 5: pkm.Nickname = "Ei"; break;
-                case 7: pkm.Nickname = "Huevo"; break;
-                case 8: pkm.Nickname = "알"; break;
-                case 9: case 10: pkm.Nickname = "蛋"; break;
-                default: pkm.Nickname = "Egg"; break;
+                1 => "タマゴ",
+                3 => "Œuf",
+                4 => "Uovo",
+                5 => "Ei",
+                7 => "Huevo",
+                8 => "알",
+                9 or 10 => "蛋",
+                _ => "Egg",
             };
 
             pkm.IsEgg = true;
@@ -351,7 +351,7 @@ namespace SysBot.Pokemon
         {
             int counter = 0;
             var temp = entry.Split(',').Skip(start);
-            List<string> list = new List<string>();
+            List<string> list = new();
 
             if (entry.Length < length)
             {

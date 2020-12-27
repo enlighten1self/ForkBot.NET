@@ -14,8 +14,8 @@ namespace SysBot.Base
         private UsbEndpointReader? reader;
         private UsbEndpointWriter? writer;
         private const int MaximumTransferSize = 468;
-        private readonly object _sync = new object();
-        public static List<string> PortIndexesAdded = new List<string>();
+        private readonly object _sync = new();
+        public static List<string> PortIndexesAdded = new();
 
         public SwitchConnectionUSB(SwitchBotConfig cfg)
         {
@@ -163,7 +163,7 @@ namespace SysBot.Base
 
         private byte[] ReadBytesLarge(uint offset, int length)
         {
-            List<byte> read = new List<byte>();
+            List<byte> read = new();
             for (int i = 0; i < length; i += MaximumTransferSize)
                 read.AddRange(ReadBytesUSB(offset + (uint)i, Math.Min(MaximumTransferSize, length - i)));
             return read.ToArray();
