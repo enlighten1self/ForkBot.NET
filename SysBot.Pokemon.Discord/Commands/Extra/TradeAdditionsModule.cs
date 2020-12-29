@@ -101,7 +101,7 @@ namespace SysBot.Pokemon.Discord
             var eggRng = rng.Next(101);
             PKM eggPkm = new PK8();
             int form1 = 0, form2 = 0, evo1 = 0, evo2 = 0;
-            bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out evo1, out evo2) && eggRng > 25;
+            bool egg = content[1] != "0-0" && content[2] != "0-0" && CanGenerateEgg(content, out _, out _, out form1, out form2, out evo1, out evo2) && eggRng > 5;
             List<string> trainerInfo = new();
 
             for (int i = 3; i < 8; i++)
@@ -124,12 +124,12 @@ namespace SysBot.Pokemon.Discord
                 eggPkm.ResetPartyStats();
             }
 
-            if (catchRng > 20)
+            if (catchRng > 2)
             {
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8);
                 var nidoranGender = string.Empty;
                 var shinyRng = rng.Next(101);
-                string shinyType = shinyRng > 98 ? "\nShiny: Square" : shinyRng > 95 ? "\nShiny: Star" : "";
+                string shinyType = shinyRng > 2 ? "\nShiny: Square" : shinyRng > 5 ? "\nShiny: Star" : "";
                 var gmaxRng = rng.Next(101);
                 var formHack = FormHack(speciesRng, shinyRng, gmaxRng);
                 var ballRng = formHack.Item2;
@@ -140,7 +140,7 @@ namespace SysBot.Pokemon.Discord
                     speciesName = speciesName.Remove(speciesName.Length - 1);
                 }
 
-                if (((speciesRng == (int)Species.Mew && shinyRng > 95) || ballRng.Contains("Cherish")) && trainerInfo.Count == 5)
+                if (((speciesRng == (int)Species.Mew && shinyRng > 5) || ballRng.Contains("Cherish")) && trainerInfo.Count == 5)
                     trainerInfo.RemoveAt(4);
 
                 if (TradeExtensions.ShinyLock.Contains(speciesRng) || (ballRng.Contains("Cherish") && !TradeExtensions.CanBeShinyCherish.Contains(speciesRng) && !TradeExtensions.CherishShinyOnly.Contains(speciesRng)) ||
@@ -149,7 +149,7 @@ namespace SysBot.Pokemon.Discord
                     shinyType = "";
 
                 var set = new ShowdownSet($"{speciesName}{formHack.Item1}{ballRng}{shinyType}\n{string.Join("\n", trainerInfo)}");
-                bool canGmax = set.CanToggleGigantamax(set.Species, set.FormIndex) && gmaxRng > 70 && !ballRng.Contains("Cherish");
+                bool canGmax = set.CanToggleGigantamax(set.Species, set.FormIndex) && gmaxRng > 7 && !ballRng.Contains("Cherish");
                 if (canGmax)
                     set.CanGigantamax = true;
 
@@ -160,7 +160,7 @@ namespace SysBot.Pokemon.Discord
                 TradeExtensions.RngRoutine(pkm);
                 var form = nidoranGender != string.Empty ? nidoranGender : TradeExtensions.FormOutput(pkm.Species, pkm.AltForm, out _);
 
-                if (pkm.Species == (int)Species.Pikachu && pkm.AltForm == 0 && shinyRng > 95)
+                if (pkm.Species == (int)Species.Pikachu && pkm.AltForm == 0 && shinyRng > 15)
                     CommonEdits.SetShiny(pkm, Shiny.Random);
 
                 var la = new LegalityAnalysis(pkm);
@@ -1115,7 +1115,7 @@ namespace SysBot.Pokemon.Discord
             var formEdgeCaseRng = rng.Next(2);
             string[] poipoleRng = { "Poke", "Beast", "Cherish" };
             var eventRng = rng.Next(101);
-            string ballRng = (eventRng > 95 && TradeExtensions.Cherish.Contains(speciesRng)) || (speciesRng == (int)Species.Melmetal && gmaxRng > 70) || TradeExtensions.CherishOnly.Contains(speciesRng) || (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && shinyRng > 95) ? "\nBall: Cherish" : "\nBall: Poke";
+            string ballRng = (eventRng > 25 && TradeExtensions.Cherish.Contains(speciesRng)) || (speciesRng == (int)Species.Melmetal && gmaxRng > 7) || TradeExtensions.CherishOnly.Contains(speciesRng) || (TradeExtensions.CherishShinyOnly.Contains(speciesRng) && shinyRng > 5) ? "\nBall: Cherish" : "\nBall: Poke";
 
             if (ballRng.Contains("Cherish"))
             {
@@ -1130,13 +1130,13 @@ namespace SysBot.Pokemon.Discord
                     case (int)Species.Corsola: formHack = "-Galar"; break;
                     case (int)Species.Rockruff: formHack = "-Dusk"; break;
                     case (int)Species.Lycanroc: formHack = "-Midnight"; break;
-                    case (int)Species.Gastrodon: _ = shinyRng > 95 ? formHack = "-West" : formHack = "-East"; break;
+                    case (int)Species.Gastrodon: _ = shinyRng > 5 ? formHack = "-West" : formHack = "-East"; break;
                     case (int)Species.Pumpkaboo: formHack = "-Super"; break;
-                    case (int)Species.Meowth: _ = formEdgeCaseRng == 1 ? formHack = $"{(gmaxRng > 70 ? "-Gmax" : "")}" : formHack = "-Galar"; break;
+                    case (int)Species.Meowth: _ = formEdgeCaseRng == 1 ? formHack = $"{(gmaxRng > 7 ? "-Gmax" : "")}" : formHack = "-Galar"; break;
                     case (int)Species.Magearna: _ = formEdgeCaseRng == 1 ? formHack = "" : formHack = "-Original"; break;
-                    case (int)Species.Raikou: _ = shinyRng > 95 ? formHack = "\nRash Nature" : formHack = ""; break;
-                    case (int)Species.Entei: _ = shinyRng > 95 ? formHack = "\nAdamant Nature" : formHack = ""; break;
-                    case (int)Species.Suicune: _ = shinyRng > 95 ? formHack = "\nRelaxed Nature" : formHack = ""; break;
+                    case (int)Species.Raikou: _ = shinyRng > 5 ? formHack = "\nRash Nature" : formHack = ""; break;
+                    case (int)Species.Entei: _ = shinyRng > 5 ? formHack = "\nAdamant Nature" : formHack = ""; break;
+                    case (int)Species.Suicune: _ = shinyRng > 5 ? formHack = "\nRelaxed Nature" : formHack = ""; break;
                     case (int)Species.Tangrowth: formHack = "\nBrave Nature"; break;
                     case (int)Species.Pichu: formHack = "\nJolly Nature"; break;
                     case (int)Species.Octillery: formHack = "\nSerious Nature"; break;
