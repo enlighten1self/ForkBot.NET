@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+    <LangVersion>9</LangVersion>
+    <Nullable>enable</Nullable>
+    <Platforms>x86</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
+	  <Reference Include="Microsoft.Z3">
+		  <HintPath>[INSERT PATH]\Microsoft.Z3.dll</HintPath>
+	  </Reference>
+    <PackageReference Include="PKHeX.Core" Version="20.11.28" />
+    <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
+	  
+  </ItemGroup>
+
+ 
+
+</Project>
