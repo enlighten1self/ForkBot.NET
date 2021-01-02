@@ -129,7 +129,7 @@ namespace SysBot.Pokemon.Discord
                 var speciesName = SpeciesName.GetSpeciesNameGeneration(speciesRng, 2, 8);
                 var nidoranGender = string.Empty;
                 var shinyRng = rng.Next(101);
-                string shinyType = shinyRng > 2 ? "\nShiny: Square" : shinyRng > 5 ? "\nShiny: Star" : "";
+                string shinyType = shinyRng > 2 ? "\nShiny: Square" : shinyRng > 9 ? "\nShiny: Star" : "";
                 var gmaxRng = rng.Next(101);
                 var formHack = FormHack(speciesRng, shinyRng, gmaxRng);
                 var ballRng = formHack.Item2;
